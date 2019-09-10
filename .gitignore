@@ -1,0 +1,7 @@
+*.dat
+*.vtu
+*__pycache__/
+*.pyc
+*.npy
+regridded_files/
+*test
