@@ -22,7 +22,7 @@ ALIGN = '='
 
 def get_header(istream):
     """Read header from an MPI-AMRVAC 2.1 snapshot. This is compatible with versions down to 2.0.
-    :param: istream     MPI-AMRVAC .dat file opened in binary mode
+    :param: istream     open datfile buffer with 'rb' mode
     :return: h          header information contained in a dictionary
     """
     istream.seek(0)
@@ -104,35 +104,86 @@ def get_header(istream):
     return h
 
 
-def get_block_data(dat):
+def get_tree_info(istream):
+    """
+    Read levels, morton-curve indices, and byte offsets for each block as stored in the datfile
+    :param: istream         open datfile buffer with 'rb' mode
+    :return: block_lvls     numpy array with block levels
+             block_ixs      numpy array with block morton-curve indices
+             block_offsets  numpy array with block offset in the datfile
+    """
+    istream.seek(0)
+    header = get_header(istream)
+    nleafs = header['nleafs']
+    nparents = header['nparents']
+
+    # Read tree info. Skip 'leaf' array
+    istream.seek(header['offset_tree'] + (nleafs+nparents) * SIZE_LOGICAL)
+
+    # Read block levels
+    fmt = ALIGN + nleafs * 'i'
+    block_lvls = np.array(struct.unpack(fmt, istream.read(struct.calcsize(fmt))))
+
+    # Read block indices
+    fmt = ALIGN + nleafs * header['ndim'] * 'i'
+    block_ixs = np.reshape(struct.unpack(fmt, istream.read(struct.calcsize(fmt))),
+                           [nleafs, header['ndim']])
+
+    # Read block offsets (skip ghost cells !)
+    bcfmt = ALIGN + header['ndim'] * 'i'
+    bcsize = struct.calcsize(bcfmt) * 2
+
+    fmt = ALIGN + nleafs * 'q'
+    block_offsets = np.array(struct.unpack(fmt, istream.read(struct.calcsize(fmt)))) + bcsize
+    return block_lvls, block_ixs, block_offsets
+
+
+def get_single_block_data(istream, byte_offset, block_shape):
+    """"
+    Retrieve a specific block from the datfile
+    :param: istream       open datfile buffer in 'rb' mode
+    :param: byte_offset   offset of the given block in the datfile
+    :param: block_shape   the shape of the block
+    :return: block_data   numpy array containing the block data, with dimensions equal to block_shape
+    """
+    istream.seek(byte_offset)
+    # Read actual data
+    fmt = ALIGN + np.prod(block_shape) * 'd'
+    d = struct.unpack(fmt, istream.read(struct.calcsize(fmt)))
+    # Fortran ordering
+    block_data = np.reshape(d, block_shape, order='F')
+    return block_data
+
+
+def get_blocks(istream):
     """
     Reads block data from an MPI-AMRVAC 2.0 snapshot.
-    :param dat: .dat file opened in binary mode.
-    :return: Dictionary containing block data.
+    :param istream   open datfile buffer in 'rb' mode
+    :return Dictionary containing block data.
     """
 
-    dat.seek(0)
-    h = get_header(dat)
+    istream.seek(0)
+    h = get_header(istream)
     nw = h['nw']
     block_nx = np.array(h['block_nx'])
     nleafs = h['nleafs']
     nparents = h['nparents']
 
     # Read tree info. Skip 'leaf' array
-    dat.seek(h['offset_tree'] + (nleafs + nparents) * SIZE_LOGICAL)
+    istream.seek(h['offset_tree'] + (nleafs + nparents) * SIZE_LOGICAL)
 
     # Read block levels
     fmt = ALIGN + nleafs * 'i'
-    block_lvls = np.array(struct.unpack(fmt, dat.read(struct.calcsize(fmt))))
+    block_lvls = np.array(struct.unpack(fmt, istream.read(struct.calcsize(fmt))))
 
     # Read block indices
     fmt = ALIGN + nleafs * h['ndim'] * 'i'
     block_ixs = np.reshape(
-        struct.unpack(fmt, dat.read(struct.calcsize(fmt))),
+        struct.unpack(fmt, istream.read(struct.calcsize(fmt))),
         [nleafs, h['ndim']])
 
     # Start reading data blocks
-    dat.seek(h['offset_blocks'])
+    istream.seek(h['offset_blocks'])
 
     blocks = []
 
@@ -142,13 +193,13 @@ def get_block_data(dat):
 
         # Read number of ghost cells
         fmt = ALIGN + h['ndim'] * 'i'
-        gc_lo = np.array(struct.unpack(fmt, dat.read(struct.calcsize(fmt))))
-        gc_hi = np.array(struct.unpack(fmt, dat.read(struct.calcsize(fmt))))
+        gc_lo = np.array(struct.unpack(fmt, istream.read(struct.calcsize(fmt))))
+        gc_hi = np.array(struct.unpack(fmt, istream.read(struct.calcsize(fmt))))
 
         # Read actual data
         block_shape = np.append(gc_lo + block_nx + gc_hi, nw)
         fmt = ALIGN + np.prod(block_shape) * 'd'
-        d = struct.unpack(fmt, dat.read(struct.calcsize(fmt)))
+        d = struct.unpack(fmt, istream.read(struct.calcsize(fmt)))
         w = np.reshape(d, block_shape, order='F')  # Fortran ordering
 
         b = {"lvl": lvl, "ix": ix, "w": w}
@@ -157,14 +208,14 @@ def get_block_data(dat):
     return blocks
 
 
-def get_uniform_data(dat, hdr):
+def get_uniform_data(istream, hdr):
     """
     Retrieves the data for a uniform data set.
-    :param dat: .dat file, opened in binary mode.
+    :param istream: .dat file, opened in binary mode.
     :param hdr: The .dat file header.
-    :return: The raw data as a NumPy array.
+    :return The raw data as a NumPy array.
     """
-    blocks = get_block_data(dat)
+    blocks = get_blocks(istream)
 
     refined_nx = 2 ** (hdr['levmax'] - 1) * hdr['domain_nx']
     domain_shape = np.append(refined_nx, hdr['nw'])
@@ -181,26 +232,25 @@ def get_uniform_data(dat, hdr):
             d[i0[0]:i1[0], i0[1]:i1[1], i0[2]:i1[2], :] = b['w']
     return d
 
-def get_amr_data(dat, hdr, nbprocs):
+def get_amr_data(istream, hdr, nbprocs):
     """
     Retrieves the data for a non-uniform data set by performing regridding.
-    :param dat: .dat file, opened in binary mode.
-    :param hdr: The .dat file header.
-    :param nbprocs: The number of processors to use when regridding.
+    :param istream   open datfile buffer in 'rb' mode
+    :param hdr       the .dat file header.
+    :param nbprocs   the number of processors to use when regridding.
     :return: The raw data as a NumPy array.
     """
     # version check
     PY2 = sys.version_info[0] == 2
     if PY2:
-        print("Only Python 3 is supported due to methods from the multiprocessing module.")
+        print("Regridding only has Python 3 support due to methods from the multiprocessing module.")
         sys.exit(1)
 
     if nbprocs is None:
         nbprocs = multiprocessing.cpu_count() - 2
-    print("[INFO] Regridding will be done using {} processors.".format(nbprocs))
-    print("-"*40)
+    print("[INFO] Regridding using {} processors.".format(nbprocs))
 
-    blocks = get_block_data(dat)
+    blocks = get_blocks(istream)
     refined_nx = 2 ** (hdr['levmax'] - 1) * hdr['domain_nx']
     domain_shape = np.append(refined_nx, hdr['nw'])
     d = np.zeros(domain_shape, order='F')
