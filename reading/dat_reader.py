@@ -4,12 +4,6 @@ Module containing reading and processing methods for an MPI-AMRVAC .dat file.
 @author: Jannis Theunissen (original)
          Niels Claes (extensions)
 """
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import struct
 import numpy as np
 import sys
@@ -17,80 +11,92 @@ import scipy.interpolate as interp
 import multiprocessing
 
 # Size of basic types (in bytes)
-size_logical = 4
-size_int = 4
-size_double = 8
-name_len = 16
+SIZE_LOGICAL = 4
+SIZE_INT = 4
+SIZE_DOUBLE = 8
+NAME_LEN = 16
 
 # For un-aligned data, use '=' (for aligned data set to '')
-align = '='
+ALIGN = '='
 
 
-def get_header(dat):
+def get_header(istream):
+    """Read header from an MPI-AMRVAC 2.1 snapshot. This is compatible with versions down to 2.0.
+    :param: istream     MPI-AMRVAC .dat file opened in binary mode
+    :return: h          header information contained in a dictionary
     """
-    Reads header from MPI-AMRVAC 2.0 snapshot.
-    :param dat: .dat file opened in binary mode.
-    :return: Dictionary containing header data from snapshot.
-    """
-
-    dat.seek(0)
+    istream.seek(0)
     h = {}
 
+    fmt = ALIGN + 'i'
+    [h['datfile_version']] = struct.unpack(fmt, istream.read(struct.calcsize(fmt)))
 
-    fmt = align + 'i'
-    [h['version']] = struct.unpack(fmt, dat.read(struct.calcsize(fmt)))
-
-    if h['version'] < 3:
-        print("Unsupported .dat file version: ", h['version'])
-        sys.exit()
+    if h['datfile_version'] < 3:
+        raise IOError("Unsupported AMRVAC .dat file version: %d", h['datfile_version'])
 
     # Read scalar data at beginning of file
-    fmt = align + 9 * 'i' + 'd'
-    hdr = struct.unpack(fmt, dat.read(struct.calcsize(fmt)))
+    fmt = ALIGN + 9 * 'i' + 'd'
+    hdr = struct.unpack(fmt, istream.read(struct.calcsize(fmt)))
     [h['offset_tree'], h['offset_blocks'], h['nw'],
      h['ndir'], h['ndim'], h['levmax'], h['nleafs'], h['nparents'],
      h['it'], h['time']] = hdr
 
     # Read min/max coordinates
-    fmt = align + h['ndim'] * 'd'
-    h['xmin'] = np.array(struct.unpack(fmt, dat.read(struct.calcsize(fmt))))
-    h['xmax'] = np.array(struct.unpack(fmt, dat.read(struct.calcsize(fmt))))
+    fmt = ALIGN + h['ndim'] * 'd'
+    h['xmin'] = np.array(
+        struct.unpack(fmt, istream.read(struct.calcsize(fmt))))
+    h['xmax'] = np.array(
+        struct.unpack(fmt, istream.read(struct.calcsize(fmt))))
 
     # Read domain and block size (in number of cells)
-    fmt = align + h['ndim'] * 'i'
+    fmt = ALIGN + h['ndim'] * 'i'
     h['domain_nx'] = np.array(
-        struct.unpack(fmt, dat.read(struct.calcsize(fmt))))
+        struct.unpack(fmt, istream.read(struct.calcsize(fmt))))
     h['block_nx'] = np.array(
-        struct.unpack(fmt, dat.read(struct.calcsize(fmt))))
+        struct.unpack(fmt, istream.read(struct.calcsize(fmt))))
+
+    if h['datfile_version'] >= 5:
+        # Read periodicity
+        fmt = ALIGN + h['ndim'] * 'i' # Fortran logical is 4 byte int
+        h['periodic'] = np.array(
+            struct.unpack(fmt, istream.read(struct.calcsize(fmt))), dtype=bool)
+
+        # Read geometry name
+        fmt = ALIGN + NAME_LEN * 'c'
+        hdr = struct.unpack(fmt, istream.read(struct.calcsize(fmt)))
+        h['geometry'] = b''.join(hdr).strip().decode()
+
+        # Read staggered flag
+        fmt = ALIGN + 'i' # Fortran logical is 4 byte int
+        h['staggered'] = bool(
+            struct.unpack(fmt, istream.read(struct.calcsize(fmt)))[0])
 
     # Read w_names
     w_names = []
     for i in range(h['nw']):
-        fmt = align + name_len * 'c'
-        hdr = struct.unpack(fmt, dat.read(struct.calcsize(fmt)))
+        fmt = ALIGN + NAME_LEN * 'c'
+        hdr = struct.unpack(fmt, istream.read(struct.calcsize(fmt)))
         w_names.append(b''.join(hdr).strip().decode())
     h['w_names'] = w_names
 
     # Read physics type
-    fmt = align + name_len * 'c'
-    hdr = struct.unpack(fmt, dat.read(struct.calcsize(fmt)))
+    fmt = ALIGN + NAME_LEN * 'c'
+    hdr = struct.unpack(fmt, istream.read(struct.calcsize(fmt)))
     h['physics_type'] = b''.join(hdr).strip().decode()
 
     # Read number of physics-defined parameters
-    fmt = align + 'i'
-    [n_pars] = struct.unpack(fmt, dat.read(struct.calcsize(fmt)))
+    fmt = ALIGN + 'i'
+    [n_pars] = struct.unpack(fmt, istream.read(struct.calcsize(fmt)))
 
     # First physics-parameter values are given, then their names
-    fmt = align + n_pars * 'd'
-    vals = struct.unpack(fmt, dat.read(struct.calcsize(fmt)))
+    fmt = ALIGN + n_pars * 'd'
+    vals = struct.unpack(fmt, istream.read(struct.calcsize(fmt)))
 
-    fmt = align + n_pars * name_len * 'c'
-    names = struct.unpack(fmt, dat.read(struct.calcsize(fmt)))
+    fmt = ALIGN + n_pars * NAME_LEN * 'c'
+    names = struct.unpack(fmt, istream.read(struct.calcsize(fmt)))
     # Split and join the name strings (from one character array)
-    names = [b''.join(names[i:i+name_len]).strip().decode()
-             for i in range(0, len(names), name_len)]
-    # names = [str(b''.join(names[i:i + name_len]).strip())
-    #          for i in range(0, len(names), name_len)]
+    names = [b''.join(names[i:i+NAME_LEN]).strip().decode()
+             for i in range(0, len(names), NAME_LEN)]
 
     # Store the values corresponding to the names
     for val, name in zip(vals, names):
@@ -113,14 +119,14 @@ def get_block_data(dat):
     nparents = h['nparents']
 
     # Read tree info. Skip 'leaf' array
-    dat.seek(h['offset_tree'] + (nleafs + nparents) * size_logical)
+    dat.seek(h['offset_tree'] + (nleafs + nparents) * SIZE_LOGICAL)
 
     # Read block levels
-    fmt = align + nleafs * 'i'
+    fmt = ALIGN + nleafs * 'i'
     block_lvls = np.array(struct.unpack(fmt, dat.read(struct.calcsize(fmt))))
 
     # Read block indices
-    fmt = align + nleafs * h['ndim'] * 'i'
+    fmt = ALIGN + nleafs * h['ndim'] * 'i'
     block_ixs = np.reshape(
         struct.unpack(fmt, dat.read(struct.calcsize(fmt))),
         [nleafs, h['ndim']])
@@ -135,13 +141,13 @@ def get_block_data(dat):
         ix = block_ixs[i]
 
         # Read number of ghost cells
-        fmt = align + h['ndim'] * 'i'
+        fmt = ALIGN + h['ndim'] * 'i'
         gc_lo = np.array(struct.unpack(fmt, dat.read(struct.calcsize(fmt))))
         gc_hi = np.array(struct.unpack(fmt, dat.read(struct.calcsize(fmt))))
 
         # Read actual data
         block_shape = np.append(gc_lo + block_nx + gc_hi, nw)
-        fmt = align + np.prod(block_shape) * 'd'
+        fmt = ALIGN + np.prod(block_shape) * 'd'
         d = struct.unpack(fmt, dat.read(struct.calcsize(fmt)))
         w = np.reshape(d, block_shape, order='F')  # Fortran ordering
 
