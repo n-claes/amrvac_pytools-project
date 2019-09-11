@@ -27,10 +27,10 @@ class load_file:
         print(">> Reading {}".format(filename))
 
         self._file = file
-        self._header = dat_reader.get_header(file)
+        self.header = dat_reader.get_header(file)
         self._uniform = self._data_is_uniform()
         self._conservative = self._data_is_conservative()
-        self._data_dict = None
+        self.data_dict = None
         self._regriddir = "regridded_files"
 
         # load blocktree information
@@ -42,9 +42,9 @@ class load_file:
         Checks if the data is uniformely refined.
         :return: True if grid is uniform, False otherwise.
         """
-        refined_nx = 2 ** (self._header['levmax'] - 1) * self._header['domain_nx']
-        nleafs_uniform = np.prod(refined_nx / self._header['block_nx'])
-        if not self._header["nleafs"] == nleafs_uniform:
+        refined_nx = 2 ** (self.header['levmax'] - 1) * self.header['domain_nx']
+        nleafs_uniform = np.prod(refined_nx / self.header['block_nx'])
+        if not self.header["nleafs"] == nleafs_uniform:
             return False
         return True
 
@@ -53,7 +53,7 @@ class load_file:
         Checks if the current data is in the form of conservative variables.
         :return: True if 'm1' is in the list of variables, False otherwise
         """
-        if "m1" in self._header["w_names"]:
+        if "m1" in self.header["w_names"]:
             return True
         else:
             return False
@@ -64,17 +64,17 @@ class load_file:
         """
         print("")
         print("[INFO] Current file      : {}".format(self._filename))
-        print("[INFO] Datfile version   : {}".format(self._header["datfile_version"]))
-        print("[INFO] Current time      : {}".format(self._header["time"]))
-        print("[INFO] Physics type      : {}".format(self._header["physics_type"]))
+        print("[INFO] Datfile version   : {}".format(self.header["datfile_version"]))
+        print("[INFO] Current time      : {}".format(self.header["time"]))
+        print("[INFO] Physics type      : {}".format(self.header["physics_type"]))
         print("[INFO] Conservative vars : {}".format(self._conservative))
-        print("[INFO] Boundaries        : {} -> {}".format(self._header["xmin"],
-                                                           self._header["xmax"]))
-        print("[INFO] Max AMR level     : {}".format(self._header["levmax"]))
-        print("[INFO] Block size        : {}".format(self._header["block_nx"]))
+        print("[INFO] Boundaries        : {} -> {}".format(self.header["xmin"],
+                                                           self.header["xmax"]))
+        print("[INFO] Max AMR level     : {}".format(self.header["levmax"]))
+        print("[INFO] Block size        : {}".format(self.header["block_nx"]))
         print("-" * 40)
         print("Currently known variables:")
-        print(self._header["w_names"])
+        print(self.header["w_names"])
         print("\n")
 
     def get_bounds(self):
@@ -84,8 +84,8 @@ class load_file:
                  Depending on the dimension the list size is either 1, 2 or 3.
         """
         bounds = []
-        for i in range(len(self._header["xmin"])):
-            bounds.append([self._header["xmin"][i], self._header["xmax"][i]])
+        for i in range(len(self.header["xmin"])):
+            bounds.append([self.header["xmin"][i], self.header["xmax"][i]])
         return bounds
 
     def get_coordinate_arrays(self):
@@ -96,10 +96,10 @@ class load_file:
         """
         self._check_datadict_exists()
 
-        w_names = self._header["w_names"]
-        xmax = self._header["xmax"]
-        xmin = self._header["xmin"]
-        nx = np.asarray(self._data_dict.data[w_names[0]].shape)
+        w_names = self.header["w_names"]
+        xmax = self.header["xmax"]
+        xmin = self.header["xmin"]
+        nx = np.asarray(self.data_dict.data[w_names[0]].shape)
 
         coordinate_arrays = []
         for i in range(len(nx)):
@@ -113,11 +113,11 @@ class load_file:
         Data will be regridded if this is not already done.
         """
         if self._uniform:
-            data = dat_reader.get_uniform_data(self._file, self._header)
+            data = dat_reader.get_uniform_data(self._file, self.header)
         else:
             data = self._regrid_data(nbprocs, regriddir)
-        self._data_dict = process_data.create_amrvac_dict(data, self._header)
-        return self._data_dict.data
+        self.data_dict = process_data.create_amrvac_dict(data, self.header)
+        return self.data_dict.data
 
     def _regrid_data(self, nbprocs, regriddir):
         """
@@ -132,7 +132,7 @@ class load_file:
         try:
             data = self._load_regridded_data()
         except FileNotFoundError:
-            data = dat_reader.get_amr_data(self._file, self._header, nbprocs)
+            data = dat_reader.get_amr_data(self._file, self.header, nbprocs)
             self._save_regridded_data(data)
         return data
 
@@ -143,15 +143,15 @@ class load_file:
         """
         self._check_datadict_exists()
 
-        if not (self._header["physics_type"] == "hd" or
-                self._header["physics_type"] == "mhd"):
+        if not (self.header["physics_type"] == "hd" or
+                self.header["physics_type"] == "mhd"):
             print("Switching variable types only possible in hd or mhd")
             return
         if self._conservative:
-            self._data_dict.convert_to_primitive()
+            self.data_dict.convert_to_primitive()
             self._conservative = False
         else:
-            self._data_dict.convert_to_conservative()
+            self.data_dict.convert_to_conservative()
             self._conservative = True
         return
 
@@ -160,7 +160,7 @@ class load_file:
         Gets the current snapshot time.
         :return: Current time in the simulation (in AMRVAC units).
         """
-        return self._header["time"]
+        return self.header["time"]
 
     def _check_regrid_directory(self, regriddir):
         """
@@ -207,32 +207,7 @@ class load_file:
         else:
             raise FileNotFoundError
 
-    def plot(self, var, varname=None):
-        """
-        Makes a simple 1 or 2 dimensional plot of the given data. 3D plotting is not supported at the moment.
-        :param var: Data of the variable to plot (eg. data_dict['rho']) if data is contained in 'data_dict'.
-        :param varname: Names the variable on the plot.
-        :exception: Terminates program if data is three-dimensional.
-        """
-        if self._header["ndim"] == 1:
-            fig, ax = plt.subplots(1)
-            x = self.get_coordinate_arrays()[0]
-            ax.plot(x, var)
-        elif self._header["ndim"] == 2:
-            fig, ax = plt.subplots(1)
-            bounds_x, bounds_y = self.get_bounds()
-            im = ax.imshow(np.rot90(var), extent=[*bounds_x, *bounds_y])
-            fig.colorbar(im)
-            if varname is not None:
-                ax.set_title("{} : {}".format(self._filename, varname))
-            else:
-                ax.set_title("{}".format(self._filename))
-        else:
-            print("3D plotting not implemented.")
-            sys.exit(1)
-        return
-
     def _check_datadict_exists(self):
-        if self._data_dict is None:
+        if self.data_dict is None:
             print("[INFO] Dataset must be loaded to do this, call load_all_data() first.")
             raise AttributeError
