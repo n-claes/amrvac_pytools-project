@@ -26,7 +26,7 @@ class load_file:
                 break
         print(">> Reading {}".format(filename))
 
-        self._file = file
+        self.file = file
         self.header = dat_reader.get_header(file)
         self._uniform = self._data_is_uniform()
         self._conservative = self._data_is_conservative()
@@ -35,6 +35,7 @@ class load_file:
 
         # load blocktree information
         self.block_lvls, self.block_ixs, self.block_offsets = dat_reader.get_tree_info(file)
+        self.block_shape = np.append(self.header["block_nx"], self.header["nw"])
 
 
     def _data_is_uniform(self):
@@ -113,7 +114,7 @@ class load_file:
         Data will be regridded if this is not already done.
         """
         if self._uniform:
-            data = dat_reader.get_uniform_data(self._file, self.header)
+            data = dat_reader.get_uniform_data(self.file, self.header)
         else:
             data = self._regrid_data(nbprocs, regriddir)
         self.data_dict = process_data.create_amrvac_dict(data, self.header)
@@ -132,7 +133,7 @@ class load_file:
         try:
             data = self._load_regridded_data()
         except FileNotFoundError:
-            data = dat_reader.get_amr_data(self._file, self.header, nbprocs)
+            data = dat_reader.get_amr_data(self.file, self.header, nbprocs)
             self._save_regridded_data(data)
         return data
 
