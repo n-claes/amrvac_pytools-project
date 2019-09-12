@@ -6,10 +6,11 @@ Class to load in MPI-AMRVAC .dat files.
 """
 import sys, os
 import numpy as np
-from reading import process_data, datfile_utilities
-import matplotlib.pyplot as plt
+from reading import datfile_utilities
+from processing import process_data, regridding
 
-class load_file:
+
+class load_file():
     def __init__(self, filename):
         try:
             file = open(filename, "rb")
@@ -133,7 +134,7 @@ class load_file:
         try:
             data = self._load_regridded_data()
         except FileNotFoundError:
-            data = datfile_utilities.get_amr_data(self.file, self.header, nbprocs)
+            data = regridding.regrid_amr_data(self.file, self.header, nbprocs)
             self._save_regridded_data(data)
         return data
 
@@ -220,10 +221,10 @@ class load_file:
             try:
                 data = np.load(filename_regridded)
                 print("[INFO] Regridded file found and loaded ({}).".format(filename_regridded))
-                print("-"*40)
                 return data
-            except:
-                print("[INFO] File found but failed to load: {}".format(filename_regridded))
+            except OSError:
+                print("[ERROR] File found but failed to load: {}".format(filename_regridded))
+                sys.exit(1)
         else:
             raise FileNotFoundError
 

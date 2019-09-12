@@ -5,12 +5,12 @@ Class to process the MPI-AMRVAC raw data into a useful Python dictionary.
 """
 
 import sys
-from reading import convert
+from processing import convert
 
 from collections import OrderedDict
 import copy
 
-class create_amrvac_dict(object):
+class create_amrvac_dict():
     def __init__(self, raw_data, header):
         self._header  = header
         self._w_names = header["w_names"]
