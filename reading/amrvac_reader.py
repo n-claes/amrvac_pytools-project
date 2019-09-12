@@ -6,7 +6,7 @@ Class to load in MPI-AMRVAC .dat files.
 """
 import sys, os
 import numpy as np
-from reading import process_data, dat_reader
+from reading import process_data, datfile_utilities
 import matplotlib.pyplot as plt
 
 class load_file:
@@ -27,14 +27,14 @@ class load_file:
         print(">> Reading {}".format(filename))
 
         self.file = file
-        self.header = dat_reader.get_header(file)
+        self.header = datfile_utilities.get_header(file)
         self._uniform = self._data_is_uniform()
         self._conservative = self._data_is_conservative()
         self.data_dict = None
         self._regriddir = "regridded_files"
 
         # load blocktree information
-        self.block_lvls, self.block_ixs, self.block_offsets = dat_reader.get_tree_info(file)
+        self.block_lvls, self.block_ixs, self.block_offsets = datfile_utilities.get_tree_info(file)
         self.block_shape = np.append(self.header["block_nx"], self.header["nw"])
 
 
@@ -114,7 +114,7 @@ class load_file:
         Data will be regridded if this is not already done.
         """
         if self._uniform:
-            data = dat_reader.get_uniform_data(self.file, self.header)
+            data = datfile_utilities.get_uniform_data(self.file, self.header)
         else:
             data = self._regrid_data(nbprocs, regriddir)
         self.data_dict = process_data.create_amrvac_dict(data, self.header)
@@ -133,7 +133,7 @@ class load_file:
         try:
             data = self._load_regridded_data()
         except FileNotFoundError:
-            data = dat_reader.get_amr_data(self.file, self.header, nbprocs)
+            data = datfile_utilities.get_amr_data(self.file, self.header, nbprocs)
             self._save_regridded_data(data)
         return data
 
@@ -170,7 +170,7 @@ class load_file:
         varmin = 1e99
         varidx = self.header["w_names"].index(var)
         for offset in self.block_offsets:
-            block = dat_reader.get_single_block_data(self.file, offset, self.block_shape)
+            block = datfile_utilities.get_single_block_data(self.file, offset, self.block_shape)
             if self.header["ndim"] == 1:
                 varmax = np.maximum(varmax, np.max(block[:, varidx]))
                 varmin = np.minimum(varmin, np.min(block[:, varidx]))

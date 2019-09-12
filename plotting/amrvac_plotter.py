@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import collections
 
-from reading import dat_reader
+from reading import datfile_utilities
 
 class _plotsetup():
     def __init__(self, dataset, **kwargs):
@@ -61,7 +61,7 @@ class amrplot(_plotsetup):
             # retrieve block offset in dat file
             offset = self.dataset.block_offsets[ileaf]
             # read in block data (contains all variables)
-            block = dat_reader.get_single_block_data(self.dataset.file, offset, self.dataset.block_shape)
+            block = datfile_utilities.get_single_block_data(self.dataset.file, offset, self.dataset.block_shape)
             # cut block data to contain only the desired variable
             block_data = block[:, var_idx]
             x = np.linspace(l_edge, r_edge, self.block_nx)
@@ -74,7 +74,7 @@ class amrplot(_plotsetup):
             l_edge = self.dataset.header["xmin"] + (morton_idx - 1) * self.block_nx * dx
             r_edge = l_edge + self.block_nx * dx
             offset = self.dataset.block_offsets[ileaf]
-            block = dat_reader.get_single_block_data(self.dataset.file, offset, self.dataset.block_shape)
+            block = datfile_utilities.get_single_block_data(self.dataset.file, offset, self.dataset.block_shape)
             block_data = block[:, :, self.dataset.header['w_names'].index(self.var)]
             x = np.linspace(l_edge[0], r_edge[0], self.block_nx[0])
             y = np.linspace(l_edge[1], r_edge[1], self.block_nx[1])
