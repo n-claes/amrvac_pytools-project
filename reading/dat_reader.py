@@ -143,7 +143,7 @@ def get_single_block_data(istream, byte_offset, block_shape):
     Retrieve a specific block from the datfile
     :param: istream       open datfile buffer in 'rb' mode
     :param: byte_offset   offset of the given block in the datfile
-    :param: block_shape   the shape of the block
+    :param: block_shape   the shape of the block (list containing dimensions + number of variables)
     :return: block_data   numpy array containing the block data, with dimensions equal to block_shape
     """
     istream.seek(byte_offset)

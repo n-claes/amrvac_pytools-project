@@ -163,6 +163,25 @@ class load_file:
         """
         return self.header["time"]
 
+    def get_extrema(self, var):
+        if var not in self.header["w_names"]:
+            raise KeyError("variable not currently known")
+        varmax = -1e99
+        varmin = 1e99
+        varidx = self.header["w_names"].index(var)
+        for offset in self.block_offsets:
+            block = dat_reader.get_single_block_data(self.file, offset, self.block_shape)
+            if self.header["ndim"] == 1:
+                varmax = np.maximum(varmax, np.max(block[:, varidx]))
+                varmin = np.minimum(varmin, np.min(block[:, varidx]))
+            elif self.header["ndim"] == 2:
+                varmax = np.maximum(varmax, np.max(block[:, :, varidx]))
+                varmin = np.minimum(varmin, np.min(block[:, :, varidx]))
+            else:
+                varmax = np.maximum(varmax, np.max(block[:, :, :, varidx]))
+                varmin = np.minimum(varmin, np.min(block[:, :, :, varidx]))
+        return varmin, varmax
+
     def _check_regrid_directory(self, regriddir):
         """
         Checks if the specified save directory is present. Defaults to 'regridded_files', if this folder is not
