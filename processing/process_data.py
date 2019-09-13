@@ -14,7 +14,7 @@ from collections import OrderedDict
 def add_primitives_to_single_block(block, dataset):
     """
     This function is used by the synthetic views to calculate pressure and temperature on-the-go.
-    For now, only add pressure (last-to-one index) and temperature (last index)
+    For now, only add pressure and temperature
     :param block: data of a single block, numpy array of shape dataset.block_shape
     :param dataset: amrvac_reader instance, containing the dataset info
     :return: block with pressure and temperature added
@@ -22,7 +22,7 @@ def add_primitives_to_single_block(block, dataset):
     # calculate pressure
     ndim = dataset.header['ndim']
     phys_type = dataset.header['physics_type']
-    block_fields = dataset.block_fields
+    block_fields = copy.deepcopy(dataset.header['w_names'])
     gamma = dataset.header['gamma']
     rho_idx = dataset.header['w_names'].index('rho')
     if ndim == 2:
@@ -37,13 +37,29 @@ def add_primitives_to_single_block(block, dataset):
         else:
             v1, v2, v3, p = convert.mhd_to_primitive_3d(*(block[:, :, :, idx] for idx in range(0, len(block_fields))), gamma)
         temp = p / block[:, :, :, rho_idx]
-    # add pressure and temperature to block fields, for consistent retrieval of index later on
-    dataset.block_fields += ['p', 'T']
+    # add pressure and temperature to block_fields for consistent retrieval of index later on
     block = np.concatenate((block, p[..., np.newaxis]), axis=ndim)      # add pressure
     block = np.concatenate((block, temp[..., np.newaxis]), axis=ndim)   # add temperature
-    return block
+    block_fields += ['p', 'T']
+    # additional check
+    assert block.shape[-1] == len(block_fields)
+    return block, block_fields
 
 
+def get_block_edges(ileaf, dataset):
+    lvl = dataset.block_lvls[ileaf]
+    morton_idx = dataset.block_ixs[ileaf]
+    block_nx = dataset.header["block_nx"]
+
+    # dx at coarsest grid level
+    dx0 = dataset.domain_width / dataset.header["domain_nx"]
+    # dx at current block level
+    dx = dx0 * 0.5 ** (lvl - 1)
+
+    # calculate actual edges of the block
+    l_edge = dataset.header["xmin"] + (morton_idx - 1) * block_nx * dx
+    r_edge = l_edge + block_nx * dx
+    return l_edge, r_edge
 
 
 class create_amrvac_dict():

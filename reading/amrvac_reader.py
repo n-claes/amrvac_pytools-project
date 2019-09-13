@@ -36,11 +36,11 @@ class load_file():
         self._regriddir = "regridded_files"
 
         self.fields = copy.deepcopy(self.header["w_names"])
-        self.block_fields = copy.deepcopy(self.header["w_names"])
 
         # load blocktree information
         self.block_lvls, self.block_ixs, self.block_offsets = datfile_utilities.get_tree_info(file)
         self.block_shape = np.append(self.header["block_nx"], self.header["nw"])
+        self.domain_width = self.header["xmax"] - self.header["xmin"]
 
         # setup units
         self.units = physical_constants.units(self.header)
