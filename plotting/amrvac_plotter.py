@@ -76,9 +76,9 @@ class amrplot(_plotsetup):
             offset = self.dataset.block_offsets[ileaf]
             block = datfile_utilities.get_single_block_data(self.dataset.file, offset, self.dataset.block_shape)
             block_data = block[:, :, self.dataset.header['w_names'].index(self.var)]
-            x = np.linspace(l_edge[0], r_edge[0], self.block_nx[0])
-            y = np.linspace(l_edge[1], r_edge[1], self.block_nx[1])
-            im = self.ax.pcolormesh(y, x, block_data, cmap=self.cmap, vmin=varmin, vmax=varmax, snap=True)
+            x = np.linspace(l_edge[1], r_edge[1], self.block_nx[1])
+            y = np.linspace(l_edge[0], r_edge[0], self.block_nx[0])
+            im = self.ax.pcolormesh(x, y, block_data, cmap=self.cmap, vmin=varmin, vmax=varmax, snap=True)
 
             if self.draw_mesh:
                 if not r_edge[1] == self.dataset.header["xmax"][1]:
