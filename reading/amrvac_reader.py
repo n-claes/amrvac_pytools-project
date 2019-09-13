@@ -6,8 +6,10 @@ Class to load in MPI-AMRVAC .dat files.
 """
 import sys, os
 import numpy as np
+import copy
 from reading import datfile_utilities
 from processing import process_data, regridding
+from physics import physical_constants
 
 
 class load_file():
@@ -30,13 +32,18 @@ class load_file():
         self.file = file
         self.header = datfile_utilities.get_header(file)
         self._uniform = self._data_is_uniform()
-        self._conservative = self._data_is_conservative()
         self.data_dict = None
         self._regriddir = "regridded_files"
+
+        self.fields = copy.deepcopy(self.header["w_names"])
+        self.block_fields = copy.deepcopy(self.header["w_names"])
 
         # load blocktree information
         self.block_lvls, self.block_ixs, self.block_offsets = datfile_utilities.get_tree_info(file)
         self.block_shape = np.append(self.header["block_nx"], self.header["nw"])
+
+        # setup units
+        self.units = physical_constants.units(self.header)
 
 
     def _data_is_uniform(self):
@@ -50,16 +57,6 @@ class load_file():
             return False
         return True
 
-    def _data_is_conservative(self):
-        """
-        Checks if the current data is in the form of conservative variables.
-        :return: True if 'm1' is in the list of variables, False otherwise
-        """
-        if "m1" in self.header["w_names"]:
-            return True
-        else:
-            return False
-
     def get_info(self):
         """
         Prints the current snapshot info (obtained from the header) to the console.
@@ -69,14 +66,13 @@ class load_file():
         print("[INFO] Datfile version   : {}".format(self.header["datfile_version"]))
         print("[INFO] Current time      : {}".format(self.header["time"]))
         print("[INFO] Physics type      : {}".format(self.header["physics_type"]))
-        print("[INFO] Conservative vars : {}".format(self._conservative))
         print("[INFO] Boundaries        : {} -> {}".format(self.header["xmin"],
                                                            self.header["xmax"]))
         print("[INFO] Max AMR level     : {}".format(self.header["levmax"]))
         print("[INFO] Block size        : {}".format(self.header["block_nx"]))
+        print("[INFO] Number of blocks  : {}".format(len(self.block_offsets)))
         print("-" * 40)
-        print("Currently known variables:")
-        print(self.header["w_names"])
+        print("Currently known variables: {}".format(self.fields))
         print("\n")
 
     def get_bounds(self):
@@ -114,6 +110,8 @@ class load_file():
         Loads in all the data to RAM, this can take up quite some space for huge datasets.
         Data will be regridded if this is not already done.
         """
+        if self.data_dict is not None:
+            return self.data_dict
         if self._uniform:
             data = datfile_utilities.get_uniform_data(self.file, self.header)
         else:
@@ -138,24 +136,17 @@ class load_file():
             self._save_regridded_data(data)
         return data
 
-    def switch_variable_type(self):
+    def add_primitives(self):
         """
-        Switches between conservative and primitive variables. Also changes the corresponding names in the
-        header info, the order of the variables is unchanged.
+        Adds the primitives to the list of available variables. Everything must be loaded into RAM in order to do this.
         """
         self._check_datadict_exists()
 
-        if not (self.header["physics_type"] == "hd" or
-                self.header["physics_type"] == "mhd"):
-            print("Switching variable types only possible in hd or mhd")
+        if not(self.header["physics_type"] == 'hd' or self.header["physics_type"] == 'mhd'):
+            print("switching variable types is only possible in hd or mhd")
             return
-        if self._conservative:
-            self.data_dict.convert_to_primitive()
-            self._conservative = False
-        else:
-            self.data_dict.convert_to_conservative()
-            self._conservative = True
-        return
+        self.data_dict.add_primitives()
+        self.fields += self.data_dict.primitive_vars
 
     def get_time(self):
         """
