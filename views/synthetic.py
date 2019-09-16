@@ -194,10 +194,10 @@ class faraday(_syntheticmain):
         print(">> Creating Faraday view...")
         if not dataset.header["physics_type"] == "mhd":
             print("calculating Faraday rotation measure is only possible for an MHD dataset")
-            sys.exit(1)
+            return
         if not dataset.header["ndim"] == 3:
             print("calculating Faraday rotation measure is only possible for a 3D dataset")
-            sys.exit(1)
+            return
 
         super().__init__(dataset, **kwargs)
         self.cmap = kwargs.get("cmap", "jet")

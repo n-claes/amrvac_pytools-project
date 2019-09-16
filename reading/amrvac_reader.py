@@ -10,6 +10,8 @@ import copy
 from reading import datfile_utilities
 from processing import process_data, regridding
 from physics import physical_constants
+from plotting import amrvac_plotter
+from views import synthetic
 
 
 class load_file():
@@ -222,3 +224,13 @@ class load_file():
         if self.data_dict is None:
             print("[INFO] Dataset must be loaded to do this, call load_all_data() first.")
             raise AttributeError
+
+    # Following methods provide easy access to functionalities in other scripts
+    def amrplot(self, var, **kwargs):
+        return amrvac_plotter.amrplot(self, var, **kwargs)
+    def rgplot(self, data, **kwargs):
+        return amrvac_plotter.rgplot(self, data, **kwargs)
+    def halpha(self, **kwargs):
+        return synthetic.h_alpha(self, **kwargs)
+    def faraday(self, **kwargs):
+        return synthetic.faraday(self, **kwargs)
