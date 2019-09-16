@@ -2,11 +2,11 @@ import sys
 import numpy as np
 import matplotlib.colors
 import matplotlib.pyplot as plt
-import scipy.interpolate as interp
 
-from reading import datfile_utilities
-from processing import process_data, regridding
-from physics import ionisation
+from dat_files.reading import datfile_utilities
+from dat_files.processing import regridding, process_data
+from dat_files.physics import ionisation
+
 
 class _syntheticmain():
     def __init__(self, dataset, **kwargs):

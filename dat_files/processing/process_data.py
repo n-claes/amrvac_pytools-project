@@ -7,7 +7,7 @@ Class to process the MPI-AMRVAC raw data into a useful Python dictionary.
 import sys
 import numpy as np
 import copy
-from processing import convert
+from dat_files.processing import convert
 from collections import OrderedDict
 
 

@@ -1,9 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import collections
 
-from reading import datfile_utilities
-from processing import process_data
+from dat_files.reading import datfile_utilities
+from dat_files.processing import process_data
+
 
 class _plotsetup():
     def __init__(self, dataset, **kwargs):

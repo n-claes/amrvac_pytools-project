@@ -7,11 +7,11 @@ Class to load in MPI-AMRVAC .dat files.
 import sys, os
 import numpy as np
 import copy
-from reading import datfile_utilities
-from processing import process_data, regridding
-from physics import physical_constants
-from plotting import amrvac_plotter
-from views import synthetic
+from dat_files.reading import datfile_utilities
+from dat_files.processing import regridding, process_data
+from dat_files.physics import physical_constants
+from dat_files.plotting import amrvac_plotter
+from dat_files.views import synthetic
 
 
 class load_file():
