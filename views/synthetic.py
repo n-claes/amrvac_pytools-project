@@ -1,10 +1,11 @@
 import sys
 import numpy as np
+import matplotlib.colors
 import matplotlib.pyplot as plt
 import scipy.interpolate as interp
 
 from reading import datfile_utilities
-from processing import process_data
+from processing import process_data, regridding
 from physics import ionisation
 
 class _syntheticmain():
@@ -22,15 +23,21 @@ class _syntheticmain():
         else:
             self.fig = fig
             self.ax = ax
+        # these are initialised in the subclasses
+        self.cmap = None
+        self.logscale = None
+        self.colorbar = None
 
         # initialise variables
         self.line_of_sight = kwargs.get("line_of_sight", "x")
         self.altitude = kwargs.get("altitude", 20000)
         self.simulation_type = kwargs.get("simulation_type", "prominence")
         self.f23 = 0.6407  # oscillator strength of H-alpha line
+        # initialise splines for interpolation
         ionisation.init_splines(self.altitude)
         self.integrated_block_list = []
-
+        self.block_nx = self.dataset.header['block_nx']
+        self.block_nx_int = self._reduce_list_to_2d(self.block_nx)
 
     def _get_ne(self, block, block_fields, block_ion):
         block_p = block[..., block_fields.index("p")] * self.dataset.units.unit_pressure
@@ -50,82 +57,91 @@ class _syntheticmain():
         if self.dataset.header["ndim"] == 2:
             return block
 
-        block_nx = self.dataset.header['block_nx']
         if self.line_of_sight == 'x':
-            x = np.linspace(l_edge[0], r_edge[0], block_nx[0])
+            x = np.linspace(l_edge[0], r_edge[0], self.block_nx[0])
             result = np.zeros_like(block[0, :, :])
             for i, j in np.ndindex(result.shape):
                 col = block[:, i, j]
                 integrated_col = np.trapz(col, x)
                 result[i, j] = integrated_col
-            return result
         elif self.line_of_sight == 'y':
-            y = np.linspace(l_edge[1], r_edge[1], block_nx[1])
+            y = np.linspace(l_edge[1], r_edge[1], self.block_nx[1])
             result = np.zeros_like(block[:, 0, :])
             for i, j in np.ndindex(result.shape):
                 col = block[i, :, j]
                 integrated_col = np.trapz(col, y)
                 result[i, j] = integrated_col
-            return result
         else:
-            z = np.linspace(l_edge[2], r_edge[2], block_nx[2])
+            z = np.linspace(l_edge[2], r_edge[2], self.block_nx[2])
             result = np.zeros_like(block[:, :, 0])
             for i, j in np.ndindex(result.shape):
                 col = block[i, j, :]
                 integrated_col = np.trapz(col, z)
                 result[i, j] = integrated_col
-            return result
+        return result
 
-    def _regrid_2dblock(self, ileaf, block, max_lvl):
-        block_lvl = self.dataset.block_lvls[ileaf]
-        if block_lvl == max_lvl:
-            return block
-        block_nx = self.dataset.header['block_nx']
-        if self.dataset.header['ndim'] == 3:
-            # remove corresponding index from block_nx if dataset is 3D
-            if self.line_of_sight == 'x':
-                block_nx = np.asarray([block_nx[1], block_nx[2]])
-            elif self.line_of_sight == 'y':
-                block_nx = np.asarray([block_nx[0], block_nx[2]])
-            else:
-                block_nx = np.asarray(block_nx[:-1])
+    def _reduce_list_to_2d(self, list_in):
+        if self.dataset.header['ndim'] == 2:
+            return np.asarray(list_in)
 
-        regrid_width = block_nx * 2**(max_lvl - block_lvl)
-        nb_elements = np.prod(block_nx)
-
-        vals = np.reshape(block, nb_elements)
-        pts = np.array([[i, j] for i in np.linspace(0, 1, block_nx[0])
-                               for j in np.linspace(0, 1, block_nx[1])])
-        grid_x, grid_y = np.mgrid[0:1:regrid_width[0]*1j,
-                                  0:1:regrid_width[1]*1j]
-        block_regridded = interp.griddata(pts, vals, (grid_x, grid_y), method='linear')
-        return block_regridded
+        if self.line_of_sight == 'x':
+            array2d = np.asarray([list_in[1], list_in[2]])
+        elif self.line_of_sight == 'y':
+            array2d = np.asarray([list_in[0], list_in[2]])
+        else:
+            array2d = np.asarray(list_in[:-1])
+        return array2d
 
     def _merge_integrated_blocks(self):
         self.integrated_block_list = np.asarray(self.integrated_block_list)
-        if self.dataset.header['ndim'] == 2:
-            return
 
-        print(self.dataset.block_ixs)
+        # Initialise merged 2D matrix
+        maxlvl = np.max(self.dataset.block_lvls)
+        refined_nx = 2**(maxlvl - 1) * self.dataset.header['domain_nx']
+        refined_nx = self._reduce_list_to_2d(refined_nx)
+        merged_result = np.zeros(tuple(refined_nx))
 
-        # for b in self.integrated_block_list:
-        #     print(b.shape)
+        # NOTE: one can also add all the blocks at a specific level together, and THEN regrid the resulting 2D
+        #       matrix to the maximum level. This is faster, however, because the 2D matrix still contains zeros
+        #       from the blocks not at the level at that moment considered, these are also accounted for during
+        #       interpolation. This has unintended consequences near the block edges between two different levels,
+        #       such as clearly visible grid lines and very small values not equal to zero (where they should be zero).
 
-        max_lvl = np.max(self.dataset.block_lvls)
-        # dx0 = self.dataset.domain_width / self.dataset.header["domain_nx"]
-        # min_dx = dx0 * 0.5 ** (max_lvl - 1)
+        # iterate over blocks and corresponding levels in dataset
+        for ileaf, blocklvl in enumerate(self.dataset.block_lvls):
+            grid_power_diff = 2 ** (maxlvl - blocklvl)          # power of 2 difference between level and max level
+            regrid_width = self.block_nx_int * grid_power_diff  # index width of the block at max resolution
+            # regrid current block to max level
+            block = regridding.regrid_2dmatrix(self.integrated_block_list[ileaf], tuple(regrid_width))
+            # retrieve current index in morton curve, reduce to 2D (due to integration)
+            block_morton_idx = self._reduce_list_to_2d(self.dataset.block_ixs[ileaf])
+            # calculate left and right index positions of the block using morton index
+            idx0 = (block_morton_idx - 1) * grid_power_diff * self.block_nx_int
+            idx1 = idx0 + tuple(regrid_width)
+            # add this block to the integrated result
+            merged_result[idx0[0]:idx1[0], idx0[1]:idx1[1]] += block
+        return merged_result
 
-
-
-
+    def _plot_synthetic_view(self, view):
+        bounds_x, bounds_y = self._reduce_list_to_2d(self.dataset.get_bounds())
+        norm = None
+        if self.logscale:
+            norm = matplotlib.colors.LogNorm()
+        im = self.ax.imshow(np.rot90(view), extent=[*bounds_x, *bounds_y], cmap=self.cmap, norm=norm)
+        self.colorbar = self.fig.colorbar(im)
+        self.ax.set_title("integrated over {}".format(self.line_of_sight))
 
 
 class h_alpha(_syntheticmain):
     def __init__(self, dataset, **kwargs):
         print(">> Creating H-alpha view...")
-        super().__init__(dataset, **kwargs)
 
-        max_blocklvl = np.max(self.dataset.block_lvls)
+        super().__init__(dataset, **kwargs)
+        self.cmap = kwargs.get("cmap", "Reds_r")
+        self.logscale = kwargs.get("logscale", True)
+        self._calculate_halpha_view()
+
+    def _calculate_halpha_view(self):
         for ileaf, offset in enumerate(self.dataset.block_offsets):
             block = datfile_utilities.get_single_block_data(self.dataset.file, offset, self.dataset.block_shape)
             # this adds the temperature and pressure to the block
@@ -146,14 +162,13 @@ class h_alpha(_syntheticmain):
             if self.simulation_type == 'filament':
                 Ibgr = 2.2 * S
                 intensity += Ibgr * np.exp(-opacity)
-            # if integrated 2D matrix is not at max_blocklvl, regrid it
-            intensity = super()._regrid_2dblock(ileaf, intensity, max_blocklvl)
+            # add integrated block to list, this preserves block index
             self.integrated_block_list.append(intensity)
 
         # merge all integrated blocks into one single 2D array
-        super()._merge_integrated_blocks()
-
-
+        view = super()._merge_integrated_blocks()
+        # plot final result
+        super()._plot_synthetic_view(view)
 
     def _gaussian(self, block, block_fields):
         block_T = block[..., block_fields.index("T")] * self.dataset.units.unit_temperature
@@ -177,4 +192,37 @@ class h_alpha(_syntheticmain):
 class faraday(_syntheticmain):
     def __init__(self, dataset, **kwargs):
         print(">> Creating Faraday view...")
+        if not dataset.header["physics_type"] == "mhd":
+            print("calculating Faraday rotation measure is only possible for an MHD dataset")
+            sys.exit(1)
+        if not dataset.header["ndim"] == 3:
+            print("calculating Faraday rotation measure is only possible for a 3D dataset")
+            sys.exit(1)
+
         super().__init__(dataset, **kwargs)
+        self.cmap = kwargs.get("cmap", "jet")
+        self.logscale = kwargs.get("logscale", False)
+        self._calculate_faraday_view()
+
+    def _calculate_faraday_view(self):
+        for ileaf, offset in enumerate(self.dataset.block_offsets):
+            block = datfile_utilities.get_single_block_data(self.dataset.file, offset, self.dataset.block_shape)
+            # add pressure and temperature to block
+            block, block_fields = process_data.add_primitives_to_single_block(block, self.dataset)
+            block_ion, block_fpar = ionisation.block_interpolate_ionisation_f(block, block_fields, self.dataset)
+            block_ne = super()._get_ne(block, block_fields, block_ion)
+            prefactor = self.dataset.units.ec**3 / (2*np.pi*self.dataset.units.m_e**2 * self.dataset.units.c**4)
+            if self.line_of_sight == 'x':
+                b_idx = 'b1'
+            elif self.line_of_sight == 'y':
+                b_idx = 'b2'
+            else:
+                b_idx = 'b3'
+            b_para = block[..., block_fields.index(b_idx)] * self.dataset.units.unit_magneticfield
+            l_edge, r_edge = process_data.get_block_edges(ileaf, self.dataset)
+            fara_measure = super()._integrate_block(block_ne*b_para, l_edge, r_edge) * prefactor
+            self.integrated_block_list.append(fara_measure)
+        view = super()._merge_integrated_blocks()
+        super()._plot_synthetic_view(view)
+        self.colorbar.set_label("rad cm$^{-2}$")
+

@@ -163,3 +163,15 @@ def interpolate_block(b, hdr):
 
     add_progress()
     return b_interpolated
+
+def regrid_2dmatrix(matrix, new_shape):
+    if matrix.shape == tuple(new_shape):
+        return matrix
+    nb_elements = np.prod(matrix.shape)
+    vals = np.reshape(matrix, nb_elements)
+    pts = np.array([[i, j] for i in np.linspace(0, 1, matrix.shape[0])
+                           for j in np.linspace(0, 1, matrix.shape[1])])
+    grid_x, grid_y = np.mgrid[0:1:new_shape[0]*1j,
+                              0:1:new_shape[1]*1j]
+    block_regridded = interp.griddata(pts, vals, (grid_x, grid_y), method='linear')
+    return block_regridded

@@ -73,7 +73,6 @@ class load_file():
         print("[INFO] Number of blocks  : {}".format(len(self.block_offsets)))
         print("-" * 40)
         print("Currently known variables: {}".format(self.fields))
-        print("\n")
 
     def get_bounds(self):
         """
