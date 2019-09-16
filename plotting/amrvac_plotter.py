@@ -81,14 +81,13 @@ class amrplot(_plotsetup):
 class rgplot(_plotsetup):
     def __init__(self, dataset, data, **kwargs):
         if dataset.data_dict is None:
-            raise AttributeError("Make sure the regridded data is loaded when calling this class (ds.load_all_data)")
+            raise AttributeError("Make sure the regridded data is loaded when calling rgplot (ds.load_all_data)")
         if not isinstance(data, np.ndarray):
-            raise Exception("Attribute 'data' passed should be a numpy array containing the data")
+            raise Exception("Attribute 'data' passed should be a numpy array containing the data. "
+                            "data = ds.load_all_data(), followed by eg. rgplot(ds, data['rho']")
         super().__init__(dataset, **kwargs)
 
         self.data = data
-        self.synthetic_view = kwargs.get("synthetic_view", False)
-
         if len(self.data.shape) == 1:
             self.plot_1d()
         elif len(self.data.shape) == 2:
@@ -102,11 +101,8 @@ class rgplot(_plotsetup):
         self.ax.plot(x, self.data, '-k')
 
     def plot_2d(self):
-        if not self.synthetic_view:
-            bounds_x, bounds_y = self.dataset.get_bounds()
-            im = self.ax.imshow(np.rot90(self.data), extent=[*bounds_x, *bounds_y], cmap=self.cmap)
-            self.fig.colorbar(im)
-        else:
-            raise NotImplementedError
+        bounds_x, bounds_y = self.dataset.get_bounds()
+        im = self.ax.imshow(np.rot90(self.data), extent=[*bounds_x, *bounds_y], cmap=self.cmap)
+        self.fig.colorbar(im)
 
 
