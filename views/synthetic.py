@@ -11,6 +11,7 @@ from physics import ionisation
 class _syntheticmain():
     def __init__(self, dataset, **kwargs):
         self.dataset = dataset
+        self.dataset.units.check_default_units()
         if self.dataset.header['ndim'] == 1:
             print("synthetic views can only be created for 2D/3D data")
             sys.exit(1)

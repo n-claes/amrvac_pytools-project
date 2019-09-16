@@ -69,3 +69,11 @@ class units(constants):
 
         # normalisation for thermal conduction coefficients
         self.unit_conduction = self.unit_density * self.unit_length * self.unit_velocity ** 3 / self.unit_temperature
+
+    def check_default_units(self):
+        if (self.unit_length == 1.0 and self.unit_numberdensity == 1.0 and
+                (self.unit_temperature == 1.0 or self.unit_velocity == 0)):
+            print("[WARNING] Unit normalisations are still at their default settings. For a consistent calculation "
+                  "these must be manually set to their respective values.\n"
+                  "          This can be done through "
+                  "ds.set_units(unit_lengh=..., unit_numberdensity=..., unit_temperature=...)")
