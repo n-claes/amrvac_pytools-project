@@ -64,16 +64,16 @@ class amrplot(_plotsetup):
             l_edge, r_edge = process_data.get_block_edges(ileaf, self.dataset)
             block = datfile_utilities.get_single_block_data(self.dataset.file, offset, self.dataset.block_shape)
             block_data = block[:, :, self.dataset.header['w_names'].index(self.var)]
-            x = np.linspace(l_edge[1], r_edge[1], self.dataset.header['block_nx'][1])
-            y = np.linspace(l_edge[0], r_edge[0], self.dataset.header['block_nx'][0])
-            im = self.ax.pcolormesh(x, y, block_data, cmap=self.cmap, vmin=varmin, vmax=varmax, snap=True)
+            x = np.linspace(l_edge[0], r_edge[0], self.dataset.header['block_nx'][1])
+            y = np.linspace(l_edge[1], r_edge[1], self.dataset.header['block_nx'][0])
+            im = self.ax.pcolormesh(x, y, block_data.T, cmap=self.cmap, vmin=varmin, vmax=varmax)
 
             if self.draw_mesh:
-                if not r_edge[1] == self.dataset.header["xmax"][1]:
-                    self.ax.vlines(x=r_edge[1], ymin=l_edge[0], ymax=r_edge[0], color=self.mesh_color,
-                                   lw=self.mesh_linewidth, linestyle=self.mesh_linestyle, alpha=self.mesh_opacity)
                 if not r_edge[0] == self.dataset.header["xmax"][0]:
-                    self.ax.hlines(y=r_edge[0], xmin=l_edge[1], xmax=r_edge[1], color=self.mesh_color,
+                    self.ax.vlines(x=r_edge[0], ymin=l_edge[1], ymax=r_edge[1], color=self.mesh_color,
+                                   lw=self.mesh_linewidth, linestyle=self.mesh_linestyle, alpha=self.mesh_opacity)
+                if not r_edge[1] == self.dataset.header["xmax"][1]:
+                    self.ax.hlines(y=r_edge[1], xmin=l_edge[0], xmax=r_edge[0], color=self.mesh_color,
                                    lw=self.mesh_linewidth, linestyle=self.mesh_linestyle, alpha=self.mesh_opacity)
         self.fig.colorbar(im)
 
