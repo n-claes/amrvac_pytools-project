@@ -5,3 +5,5 @@
 *.npy
 regridded_files/
 *test.py
+deprecated/
+old/
