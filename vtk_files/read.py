@@ -1,12 +1,11 @@
-'''Modules used for reading AMRVAC data'''
+"""Modules used for reading AMRVAC data"""
 #=============================================================================
 import numpy as np
 import vtk as v
 from numpy import loadtxt as pylabload
-import numpy_support as ah
+from vtk_files import numpy_support as ah
 import sys, time
 import struct
-#import piece2poly as he
 
 
 if sys.platform == "win32":
@@ -19,7 +18,7 @@ else:
 
 #=============================================================================
 def extract(data,varname,attribute_mode='cell'):
-    '''Extracts variable "varname" from vtk datastructure "data"'''
+    """Extracts variable "varname" from vtk datastructure 'data'"""
     if attribute_mode == 'cell':
         vtk_values = data.GetCellData().GetArray(varname)
     elif attribute_mode == 'point':
@@ -82,7 +81,7 @@ class load:
         if (self.silent == 0): print('========================================')
         if (self.silent == 0): print('loading file %s' % (self.filename))
 
-        if get != None:
+        if get is not None:
             self.getAll()
 
 
@@ -96,6 +95,7 @@ class load:
 
     def getVar(self,varname):
         try:
+            tmp = None
             exec("tmp=self.%s" % (varname))
             return tmp
         except AttributeError:
@@ -126,14 +126,8 @@ class load:
         self.getData()
         if self.data.GetPointData().GetNumberOfArrays() == 0:
             c2p = v.vtkCellDataToPointData()
-            # vtk 4,5:
-#            c2p.SetInput(self.data)
-            # vtk 6:
             c2p.SetInputData(self.data)
             self.pointdata=c2p.GetOutput()
-            # vtk 4,5:          
-#            self.pointdata.Update()
-            # vtk 6:
             c2p.Update()
         else:
             self.pointdata=self.data
@@ -260,9 +254,7 @@ class load:
             nPoints = np.shape(pts)[0]
 
             # Calculate number of blocks
-            
             nBSize=(nBWidth+1)*(nBHeight+1)
-            
             nBlocks=int(nPoints/nBSize)
 
             # For all blocks, draw the perimeter
@@ -285,45 +277,8 @@ class load:
                 for i in range(end-nBWidth,start-1,-nBWidth-1):
                     self.xBlockList.append(pts[i][0])
                     self.yBlockList.append(pts[i][1])
-            
                 self.xBlockList.append(None)
                 self.yBlockList.append(None)
-
-#############################################
-#
-#            self.nblocks = self.data.GetMaximumNumberOfPieces()
-#            self.data.SetUpdateNumberOfPieces(self.nblocks)
-#            self.xBlockList=[]
-#            self.yBlockList=[]
-#
-#            for i in range(nIgnore,self.nblocks):
-#                self.data.SetUpdatePiece(i)
-#                self.data.Update()
-#                pts = ah.vtk2array(self.data.GetPoints().GetData())
-#                nPoints = np.shape(pts)[0]
-#
-#                for i in range(nPoints):
-#                    if ((i < (nBWidth+1))or(i%(nBWidth+1)==nBWidth)):
-#                        self.xBlockList.append(pts[i][0])
-#                        self.yBlockList.append(pts[i][1])
-#                self.xBlockList.append(None)
-#                self.yBlockList.append(None)
-#                for i in range(nPoints):
-#                    if (i%(nBWidth+1)==0):
-#                        self.xBlockList.append(pts[i][0])
-#                        self.yBlockList.append(pts[i][1])
-#                self.xBlockList.append(None)
-#                self.yBlockList.append(None)
-#                for i in range(nPoints):
-#                    if (i>(nBWidth+1)*nBHeight):
-#                        self.xBlockList.append(pts[i][0])
-#                        self.yBlockList.append(pts[i][1])
-#                self.xBlockList.append(None)
-#                self.yBlockList.append(None)
-#
-#            self.data.SetUpdateNumberOfPieces(1)
-#            self.data.SetUpdatePiece(0)
-#            self.data.Update()
 
         tend = default_timer()
         if (self.silent == 0): print('Getting formatted blocklist time=%f sec' % (tend-tstart))
@@ -400,18 +355,16 @@ class load:
 
     def getAll(self):
         t0 = default_timer()
-        
         self.getData()
         tdata = default_timer()
         if (self.silent == 0): print('Reading data time= %f sec' % (tdata-t0))
 
-        if self.mirrorPlane != None:
+        if self.mirrorPlane is not None:
             if (self.silent == 0): print('========== Mirror about plane ',self.mirrorPlane,' ... ============')
             self.mirror()
 
 
         if (self.silent == 0): print('========== Initializing ... ============')
-        
 
         self.getVars()
         tvars = default_timer()
@@ -432,28 +385,9 @@ class loadvti(load):
     def __init__(self,offset,get=1,file='data',mirrorPlane=None,silent=0,
                  rotateX=0,rotateY=0,rotateZ=0,
                  scaleX=1,scaleY=1,scaleZ=1):
-        self.offset=offset
-        self.filenameout = file
-        self.isLoaded = False
-        self.mirrorPlane=mirrorPlane
-        self.silent = silent
-        
-        self.rotateX = rotateX
-        self.rotateY = rotateY
-        self.rotateZ = rotateZ
-
-        self.scaleX = scaleX
-        self.scaleY = scaleY
-        self.scaleZ = scaleZ
-
-        self.filename=''.join([self.filenameout,repr(offset).zfill(4),'.vti'])
-        self.datareader = v.vtkXMLImageDataReader()
-
-        if (self.silent == 0): print('========================================')
-        if (self.silent == 0): print('loading file %s' % (self.filename))
-
-        if get != None:
-            self.getAll()
+        super(loadvti, self).__init__(offset=offset, get=get, file=file, type='vti', mirrorPlane=mirrorPlane,
+                                      silent=silent, rotateX=rotateX, rotateY=rotateY, rotateZ=rotateZ, scaleX=scaleX,
+                                      scaleY=scaleY, scaleZ=scaleZ)
 
     def getNdim(self):
         self.ndim = 3
@@ -498,29 +432,27 @@ class loadvti(load):
 
     def getAll(self):
         t0 = default_timer()
-        
         self.getData()
         tdata = default_timer()
         if (self.silent == 0): print('Reading data time= %f sec' % (tdata-t0))
 
         self.getNdim()
-
         self.getX()
         self.getY()
         self.getZ()
 
-        if self.mirrorPlane != None:
+        if self.mirrorPlane is not None:
             if (self.silent == 0): print('========== Mirror about plane ',self.mirrorPlane,' ... ============')
             self.mirror()
 
 
         if (self.silent == 0): print('========== Initializing ... ============')
-        
+
 
         self.getVars()
         tvars = default_timer()
         if (self.silent == 0): print('Getting vars time= %f sec' % (tvars-tdata))
-        
+
         self.getTime()
 
         tend = default_timer()
@@ -528,7 +460,7 @@ class loadvti(load):
 
 #=============================================================================
 class loadcsv():
-    '''Load 1D comma separated list from a cut'''
+    """Load 1D comma separated list from a cut"""
     def __init__(self,offset,get=1,file='data',dir=1,coord=0.,silent=0):
         self.silent = silent
         self.offset=offset
@@ -541,7 +473,7 @@ class loadcsv():
         if (self.silent == 0): print('========================================')
         if (self.silent == 0): print('loading file %s' % (self.filename))
 
-        if get != None:
+        if get is not None:
             self.getAll()
 
 
@@ -686,7 +618,7 @@ class particles():
 
 #=============================================================================
 class ensemble():
-    '''Load particle ensemble .csv files'''
+    """Load particle ensemble .csv files"""
 
     def __init__(self,offset,file='data0000',npayload=1,components=3,delimiter=','):
         self.offset=offset
@@ -759,7 +691,7 @@ class postrad():
 
         self.data=-1
         self.grid=-1
-        self.header=-1
+        self.header={}
 
         self.__makefilenames()
         self.__openfiles()
@@ -836,8 +768,3 @@ class postrad():
         data = np.array(struct.unpack(self.__dtype_str*len_bytes,file_grid.read())).reshape(header['nphi'],header['ntheta'],header['nr'],3)
         
         self.grid = data
-#=============================================================================
-#if __name__ == "__main__":
-#    print("read.py is being run directly.")
-#else:
-#    print("read.py is being imported.")

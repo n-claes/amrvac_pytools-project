@@ -1,12 +1,12 @@
-'''2D plotting routines for vtu AMR data'''
+"""2D plotting routines for vtu AMR data"""
 
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from scipy.interpolate import griddata
 import sys, time
-from streamplot import streamplot
-import read as read
+from amrvac_tools.vtk_files import streamplot
+from amrvac_tools.vtk_files import read
 from matplotlib.ticker import MaxNLocator
 from scipy import ndimage
 import copy
@@ -62,33 +62,31 @@ class polyplot():
             
         self.xrange=xrange
         self.yrange=yrange
-        if xrange==None:
+        if xrange is None:
             self.xrange=[data.getBounds()[0],data.getBounds()[1]]
-        if yrange==None:
+        if yrange is None:
             self.yrange=[data.getBounds()[2],data.getBounds()[3]]
 
         self.setValue(value,min=min,max=max)
 
-        # initialize for screen:
-            # If a figure and axis were not given, create new ones
-        if fig==None:
+        # If a figure and axis were not given, create new ones
+        if fig is None:
             self.figure=plt.figure(figsize=(self.fig_w,self.fig_h),dpi=100)
         else:
-            # else, use what was given
             self.figure=fig
 
-        if axis==None:
+        if axis is None:
             self.ax = self.figure.gca()
         else:
             self.ax = axis
 
         self.show(var=value,data=data,min=min,max=max)
-        if self.filenameout == None:
+        if self.filenameout is None:
             self.figure.canvas.mpl_connect('button_press_event', self.onkey)
 
 
     def setValue(self,value,min=None,max=None):
-        '''Sets the min and max values of the data to saturate the display'''
+        """Sets the min and max values of the data to saturate the display"""
         self.value=value
         self.min=min
         self.max=max
@@ -98,7 +96,7 @@ class polyplot():
             self.max=value.max()
 
     def update(self,var=None,data=None,min=None,max=None,reset=None,fixrange=None,filenameout=None):
-        '''Prepare to re-draw the window, check if data was updated'''
+        """Prepare to re-draw the window, check if data was updated"""
         if var is not None:
             newdata = np.any(var!=self.value)
         else:
@@ -106,22 +104,22 @@ class polyplot():
 
         if newdata:
             self.value=var
-            if fixrange == None:
-                if min==None:
+            if fixrange is None:
+                if min is None:
                     self.min=self.value.min()
-                if max==None:
+                if max is None:
                     self.max=self.value.max()
-        if data != None:
+        if data is not None:
             self.data=data
-        if reset != None:
+        if reset is not None:
             self.min=self.value.min()
             self.max=self.value.max()
-        if min != None:
+        if min is not None:
             self.min = min
-        if max != None:
+        if max is not None:
             self.max = max
         
-        if filenameout != None:
+        if filenameout is not None:
             self.filenameout=filenameout
             self.figure.set_size_inches( (self.fig_w,self.fig_h) )
 
@@ -133,27 +131,27 @@ class polyplot():
 
         
     def info(self):
-        '''Print info to the console'''
+        """Print info to the console"""
         print('=======================================================')
         print('plotting range between %e and %e' % (self.min,self.max))
-        if self.fixzoom==None:
+        if self.fixzoom is None:
             print('xrange = [%e,%e]     yrange = [%e,%e]' % (self.xrange[0],self.xrange[1],self.yrange[0],self.yrange[1]))
         else:
-            print('''Fixing zoomlevel to
-xrange = [%e,%e]     yrange = [%e,%e]''' % (
+            print("""Fixing zoomlevel to
+xrange = [%e,%e]     yrange = [%e,%e]""" % (
                 self.viewXrange[0],self.viewXrange[1],self.viewYrange[0],self.viewYrange[1]))
         if self.nlevels<=1:
             print('Need more than one color-level, resetting nlevels')
             self.nlevels=256
         print('colormap = %s; nlevels=%d; orientation=%s' % (self.cmap,self.nlevels,self.orientation))
-        if self.grid!=None:
+        if self.grid is not None:
             print('Also showing gridlines')
-        if self.blocks!=None:
+        if self.blocks is not None:
             print('Also showing blocks')
         print('=======================================================')
             
     def show(self,var=None,data=None,min=None,max=None,reset=None,fixrange=None,filenameout=None):
-        '''Draw the plotting-window'''
+        """Draw the plotting-window"""
         t0 = default_timer()
 
         self.update(var=var,data=data,min=min,max=max,reset=reset,fixrange=fixrange,filenameout=filenameout)
@@ -203,19 +201,19 @@ xrange = [%e,%e]     yrange = [%e,%e]''' % (
             self.ax.fill(self.xlistspecial,self.ylistspecial,
                      facecolor=self.nancolor, closed=False, edgecolor='none',antialiased=False,zorder=-10)
 
-        if self.grid != None:
+        if self.grid is not None:
             self.ax.fill(myxlist,myylist, 
                      facecolor='none', edgecolor=self.edgecolor,aa=True,linewidth=0.2,alpha=0.8)
 
-        if self.blocks != None:
+        if self.blocks is not None:
             [myxBlockList,myyBlockList] = self.data.getPieces(self.blockWidth,self.blockHeight,self.nlevel1)
             self.ax.fill(myxBlockList,myyBlockList, 
                     facecolor='none', edgecolor=self.edgecolor,aa=True,linewidth=0.2,alpha=0.8)
 
-        if self.orientation != None:
+        if self.orientation is not None:
             self.colorbar()
         
-        if self.fixzoom==None:
+        if self.fixzoom is None:
             self.ax.set_xlim(self.xrange[0],self.xrange[1])
             self.ax.set_ylim(self.yrange[0],self.yrange[1])
         else:
@@ -223,9 +221,9 @@ xrange = [%e,%e]     yrange = [%e,%e]''' % (
             self.ax.set_ylim(self.viewYrange)
         self.ax.set_aspect('equal')
 # ticks:
-        if self.maxXticks != None:
+        if self.maxXticks is not None:
             self.ax.xaxis.set_major_locator(MaxNLocator(self.maxXticks-1))
-        if self.maxYticks != None:
+        if self.maxYticks is not None:
             self.ax.yaxis.set_major_locator(MaxNLocator(self.maxYticks-1))
 
         for tick in self.ax.xaxis.get_major_ticks():
@@ -239,7 +237,7 @@ xrange = [%e,%e]     yrange = [%e,%e]''' % (
         print('time for arranging the data= %f sec' % (tdata1-tdata0))
         print('Execution time = %f sec' % (tend-t0))
         print('=======================================================')
-        if self.filenameout == None:
+        if self.filenameout is None:
             plt.draw()
 
 # Make the main axis active:
@@ -248,14 +246,14 @@ xrange = [%e,%e]     yrange = [%e,%e]''' % (
 
 
     def colorbar(self,cax=None):
-        '''Draw the colorbar.
-        '''
+        """Draw the colorbar.
+        """
         colormap = plt.cm.get_cmap(self.cmap, self.nlevels)
         m = plt.cm.ScalarMappable(cmap=colormap)
         m.set_array(self.valueClip)
         m.set_clim(vmin=self.min,vmax=self.max)
         
-        if (cax==None):
+        if cax is None:
             divider = make_axes_locatable(self.ax)
             if self.orientation == 'horizontal':
                 self.cax = divider.append_axes("bottom", self.cbarwidth, pad=self.cbarpad)
@@ -271,7 +269,7 @@ xrange = [%e,%e]     yrange = [%e,%e]''' % (
                     
         self.cbar.solids.set_rasterized(True)
 
-        if self.cbarticks != None:
+        if self.cbarticks is not None:
             self.cbar.locator=MaxNLocator(nbins=self.cbarticks-1)
             self.cbar.update_ticks()
 
@@ -284,8 +282,8 @@ xrange = [%e,%e]     yrange = [%e,%e]''' % (
         self.cbar.ax.yaxis.get_offset_text().set_fontsize(self.fontsize-2)
 
     def save(self,filenameout=None):
-        '''Save the figure'''
-        if filenameout != None:
+        """Save the figure"""
+        if filenameout is not None:
             self.filenameout=filenameout
         print('saving plot to file %s' % (self.filenameout))
         self.figure.set_size_inches( (self.fig_w,self.fig_h) )
@@ -294,16 +292,16 @@ xrange = [%e,%e]     yrange = [%e,%e]''' % (
 
         
     def onkey(self,event):
-        '''
+        """
         Get data at mousepoint-location.  Press middle button at location to activate,
         press outside of plotting range to remove cross-hair.
-        '''
+        """
         try:
             if event.button !=2:
                 return True
         except AttributeError:
                 return True
-        if event.xdata == None:
+        if event.xdata is None:
             try:
                 self.selection.pop(0).remove()
                 plt.show()
@@ -331,12 +329,12 @@ xrange = [%e,%e]     yrange = [%e,%e]''' % (
 
 #=============================================================================
 class rgplot(polyplot):
-    '''
+    """
     As polyplot, but use regridded data to display
-    '''
+    """
     
     def show(self,var=None,data=None,min=None,max=None,reset=None,fixrange=None,filenameout=None):
-        '''Draw the plotting-window'''
+        """Draw the plotting-window"""
 
         t0 = default_timer()
 
@@ -349,7 +347,7 @@ class rgplot(polyplot):
         self.ax.set_rasterization_zorder(-9)
         self.info()
 
-        if self.fixzoom==None:
+        if self.fixzoom is None:
             self.ax.set_xlim(self.xrange[0],self.xrange[1])
             self.ax.set_ylim(self.yrange[0],self.yrange[1])
         else:
@@ -398,7 +396,7 @@ class rgplot(polyplot):
         im2.set_norm(norm) 
 #        Q=velovect(self.data.u1,self.data.u2,self.data,nvect=[20,20],scale=30,fig=self)
 
-        if self.grid != None:
+        if self.grid is not None:
             if (self.swap == 0):
                 [myxlist,myylist]=self.data.getPointList()
             else:
@@ -406,18 +404,18 @@ class rgplot(polyplot):
             self.ax.fill(myxlist,myylist, 
                      facecolor='none', edgecolor=self.edgecolor,aa=True,linewidth=0.2,alpha=0.8)
 
-        if self.blocks != None:
+        if self.blocks is not None:
             [myxBlockList,myyBlockList] = self.data.getPieces(self.blockWidth,self.blockHeight,self.nlevel1)
             self.ax.fill(myxBlockList,myyBlockList, 
                     facecolor='none', edgecolor=self.edgecolor,aa=True,linewidth=0.4,alpha=0.5)
 
-        if self.orientation != None:
+        if self.orientation is not None:
             self.colorbar() 
 
 # ticks:
-        if self.maxXticks != None:
+        if self.maxXticks is not None:
             self.ax.xaxis.set_major_locator(MaxNLocator(self.maxXticks-1))
-        if self.maxYticks != None:
+        if self.maxYticks is not None:
             self.ax.yaxis.set_major_locator(MaxNLocator(self.maxYticks-1))
 
         for tick in self.ax.xaxis.get_major_ticks():
@@ -431,7 +429,7 @@ class rgplot(polyplot):
         print('time for arranging the data= %f sec' % (tdata1-tdata0))
         print('Execution time = %f sec' % (tend-t0))
         print('=======================================================')
-        if self.filenameout == None:
+        if self.filenameout is None:
             plt.draw()
 
 # Make the main axis active:
@@ -455,7 +453,7 @@ class polyanim():
         self.filename=filename
         self.type=type
         self.filenameout=filenameout
-        if function == None:
+        if function is None:
             self.function = lambda x: x.rho
         else:
             self.function=function
@@ -468,9 +466,9 @@ class polyanim():
     def setup(self):
         data=read.load(self.offsets[0],file=self.filename,type=self.type)
 
-        if self.xrange==None:
+        if self.xrange is None:
             self.xrange=[data.getBounds()[0],data.getBounds()[1]]
-        if self.yrange==None:
+        if self.yrange is None:
             self.yrange=[data.getBounds()[2],data.getBounds()[3]]
             
     def run(self):
@@ -555,11 +553,11 @@ def plotoverline(var,data,alice,bob):
 
 #=============================================================================
 def velovect(u1,u2,d,nvect=None,scalevar=None,scale=100,color='k',ax=None,alpha=1.):
-    '''Plots normalized velocity vectors'''
+    """Plots normalized velocity vectors"""
 
     minvel=1e-40
 
-    if ax==None:
+    if ax is None:
         ax=plt.gca()
 
     CC=d.getCenterPoints()
@@ -571,7 +569,7 @@ def velovect(u1,u2,d,nvect=None,scalevar=None,scale=100,color='k',ax=None,alpha=
     if scalevar is not None:
         vr = vr*scalevar
         vz = vz*scalevar
-    if nvect==None:
+    if nvect is None:
         Q=ax.quiver(CC[:,0],CC[:,1],vr,vz,pivot='middle',width=1e-3,minlength=0.,scale=scale,
                     headwidth=6,alpha=alpha)
     else:
@@ -589,7 +587,7 @@ def velovect(u1,u2,d,nvect=None,scalevar=None,scale=100,color='k',ax=None,alpha=
 
 #=============================================================================
 def contour(var,d,levels=None,nmax=600,colors='k',linestyles='solid',ax=None,linewidths=1,smooth=1.,alpha=1.):
-    if ax==None:
+    if ax is None:
         ax=plt.gca()
 
     xrange=[ax.get_xlim()[0],ax.get_xlim()[1]]
@@ -617,7 +615,7 @@ def contour(var,d,levels=None,nmax=600,colors='k',linestyles='solid',ax=None,lin
     blurred_gridvar = ndimage.gaussian_filter(gridvar, sigma=smooth)
 
 
-    if levels == None:
+    if levels is None:
         cs = ax.contour(grid_x,grid_y,blurred_gridvar,16,alpha=alpha)
     else:
         cs = ax.contour(grid_x,grid_y,blurred_gridvar,levels=levels,colors=colors,linestyles=linestyles,linewidths=linewidths,alpha=alpha)
@@ -627,8 +625,8 @@ def contour(var,d,levels=None,nmax=600,colors='k',linestyles='solid',ax=None,lin
 
 #=============================================================================
 def streamlines(u1,u2,d,x0=None,y0=None,nmax=600,density=1,fig=None,color='b',linewidth=1,arrowsize=1,alpha=1.,smooth=0):
-    '''plots streamlines from a vector field.  Use density=[densx,densy] to control how close streamlines are allowed to get.'''
-    if fig==None:
+    """plots streamlines from a vector field.  Use density=[densx,densy] to control how close streamlines are allowed to get."""
+    if fig is None:
         ax=plt.gca()
     else:
         ax=fig.ax
@@ -636,7 +634,7 @@ def streamlines(u1,u2,d,x0=None,y0=None,nmax=600,density=1,fig=None,color='b',li
     xrange=[ax.get_xlim()[0],ax.get_xlim()[1]]
     yrange=[ax.get_ylim()[0],ax.get_ylim()[1]]
 
-    if nmax == 600 and fig != None:
+    if nmax == 600 and fig is not None:
         nmax = fig.dpi * max([fig.fig_w,fig.fig_h])
 
 
@@ -673,20 +671,20 @@ def streamlines(u1,u2,d,x0=None,y0=None,nmax=600,density=1,fig=None,color='b',li
         u = ndimage.gaussian_filter(u, sigma=smooth)
         v = ndimage.gaussian_filter(v, sigma=smooth)
 
-    if (x0 != None and y0!= None):
+    if (x0 is not None and y0 is not None):
         for myx in zip(x0,y0):
-            streamplot(x, y, u.transpose(), v.transpose(), x_0=myx[0], 
+            streamplot.streamplot(x, y, u.transpose(), v.transpose(), x_0=myx[0],
                        y_0=myx[1], density=density, linewidth=linewidth,
                        INTEGRATOR='RK4', color=color, arrowsize=arrowsize,alpha=alpha)
     else:
-        streamplot(x, y, u.transpose(), v.transpose(),  
+        streamplot.streamplot(x, y, u.transpose(), v.transpose(),
                    density=density, linewidth=linewidth,
                    INTEGRATOR='RK4', color=color, arrowsize=arrowsize,alpha=alpha)
 
 #=============================================================================
 def streamline(u1,u2,d,x1_0,x2_0,dl=1.,fig=None,nmax=600):
 
-    if fig==None:
+    if fig is None:
         ax=plt.gca()
     else:
         ax=fig.figure.gca()
@@ -694,7 +692,7 @@ def streamline(u1,u2,d,x1_0,x2_0,dl=1.,fig=None,nmax=600):
     xrange=[ax.get_xlim()[0],ax.get_xlim()[1]]
     yrange=[ax.get_ylim()[0],ax.get_ylim()[1]]
 
-    if nmax == 600 and fig != None:
+    if nmax == 600 and fig is not None:
         nmax = fig.dpi * max([fig.fig_w,fig.fig_h])
 
 
