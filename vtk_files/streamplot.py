@@ -27,11 +27,13 @@ import numpy
 import pylab
 import matplotlib
 import matplotlib.patches as mpp
+import matplotlib.colors
+import matplotlib.cm
 
 def streamplot(x, y, u, v, x_0=None, y_0=None, density=1, linewidth=1,
                color='k', cmap=None, norm=None, vmax=None, vmin=None,
                arrowsize=1, INTEGRATOR='RK4',alpha=1.):
-    '''Draws streamlines of a vector flow.
+    """Draws streamlines of a vector flow.
 
     * x and y are 1d arrays defining an *evenly spaced* grid.
     * u and v are 2d arrays (shape [y,x]) giving velocities.
@@ -44,7 +46,7 @@ def streamplot(x, y, u, v, x_0=None, y_0=None, density=1, linewidth=1,
       A value of None gives the default for each.
 
     INTEGRATOR is experimental. Currently, RK4 should be used.
-      '''
+      """
 
     ## Sanity checks.
     assert len(x.shape)==1
@@ -304,12 +306,12 @@ def streamplot(x, y, u, v, x_0=None, y_0=None, density=1, linewidth=1,
             return
         if blank[yb, xb] == 0:
             t = rk4_integrate(xb*bx_spacing, yb*by_spacing)
-            if t != None:
+            if t is not None:
                 trajectories.append(t)
 
     ## Now we build up the trajectory set. I've found it best to look
     ## for blank==0 along the edges first, and work inwards.
-    if (x_0==None and y_0==None):
+    if (x_0 is None and y_0 is None):
         for indent in range(int((max(NBX,NBY))/2)):
             for xi in range(int(max(NBX,NBY)-2*indent)):
                 traj(xi+indent, indent)
@@ -329,12 +331,12 @@ def streamplot(x, y, u, v, x_0=None, y_0=None, density=1, linewidth=1,
     
     # Load up the defaults - needed to get the color right.
     if type(color) == numpy.ndarray:
-        if vmin == None: vmin = color.min()
-        if vmax == None: vmax = color.max()
-        if norm == None: norm = matplotlib.colors.normalize
-        if cmap == None: cmap = matplotlib.cm.get_cmap(
+        if vmin is None: vmin = color.min()
+        if vmax is None: vmax = color.max()
+        if norm is None: norm = matplotlib.colors.normalize
+        if cmap is None: cmap = matplotlib.cm.get_cmap(
             matplotlib.rcParams['image.cmap'])
-    
+
     for t in trajectories:
         # Finally apply the rescale to adjust back to user-coords from
         # grid-index coordinates.
