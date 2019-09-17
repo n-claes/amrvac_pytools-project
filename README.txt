@@ -1,13 +1,13 @@
-Adding the folder 'amrvac_tools' to the Python path:
+Adding the folder 'youramrvacdir/tools/python' to the Python path:
 
 Windows users: Start -> control panel -> 'edit the system environment variables' -> tab 'hardware' -> 'environment variables'
-	       search for PYTHONPATH (or create one if it is not already there) and add the path to the 'amrvac_tools' folder
+	       search for PYTHONPATH (or create one if it is not already there) and add 'youramrvacdir/tools/python'.
 
 Mac & Linux users can add the following line to their PYTHONPATH in ~/.bashprofile (Mac) or ~/.bashrc (Linux)
 
-                   export PYTHONPATH="${PYTHONPATH}:../../amrvac_tools"
+                   export PYTHONPATH="${PYTHONPATH}:../.."
 
-where you replace '../..' with the actual path containing the 'amrvac_tools' folder.
+where you replace '../..' with the actual path to 'youramrvacdir/tools/python'.
 
 --------------------------------------------------------------
 
@@ -16,4 +16,4 @@ Users that not want to modify their PYTHONPATH, can add these two lines at the b
                    import sys
                    sys.path.append('path to amrvac_tools')
 
-where you replace 'path to amrvac_tools' with the actual path containing the 'amrvac_tools' folder.
+where you replace 'path to amrvac_tools' with the actual path 'youramrvacdir/tools/python'.
