@@ -15,6 +15,16 @@ from datfiles.views import synthetic
 
 
 class load_file():
+    # Following methods provide easy access to functionalities in other scripts
+    def amrplot(self, var, **kwargs):
+        return amrvac_plotter.amrplot(self, var, **kwargs)
+    def rgplot(self, data, **kwargs):
+        return amrvac_plotter.rgplot(self, data, **kwargs)
+    def halpha(self, **kwargs):
+        return synthetic.h_alpha(self, **kwargs)
+    def faraday(self, **kwargs):
+        return synthetic.faraday(self, **kwargs)
+
     def __init__(self, filename):
         try:
             file = open(filename, "rb")
@@ -31,13 +41,15 @@ class load_file():
                 break
         print(">> Reading {}".format(filename))
 
+        # setup basic attributes
         self.file = file
         self.header = datfile_utilities.get_header(file)
         self._uniform = self._data_is_uniform()
         self.data_dict = None
         self._regriddir = "regridded_files"
 
-        self.fields = copy.deepcopy(self.header["w_names"])
+        # load field information, including primitive variables
+        self.known_fields = self._get_known_fields()
 
         # load blocktree information
         self.block_lvls, self.block_ixs, self.block_offsets = datfile_utilities.get_tree_info(file)
@@ -46,18 +58,6 @@ class load_file():
 
         # setup units
         self.units = physical_constants.units(self.header)
-
-
-    def _data_is_uniform(self):
-        """
-        Checks if the data is uniformely refined.
-        :return: True if grid is uniform, False otherwise.
-        """
-        refined_nx = 2 ** (self.header['levmax'] - 1) * self.header['domain_nx']
-        nleafs_uniform = np.prod(refined_nx / self.header['block_nx'])
-        if not self.header["nleafs"] == nleafs_uniform:
-            return False
-        return True
 
     def get_info(self):
         """
@@ -74,7 +74,7 @@ class load_file():
         print("[INFO] Block size        : {}".format(self.header["block_nx"]))
         print("[INFO] Number of blocks  : {}".format(len(self.block_offsets)))
         print("-" * 40)
-        print("Currently known variables: {}".format(self.fields))
+        print("Known variables: {}".format(self.known_fields))
 
     def get_bounds(self):
         """
@@ -118,36 +118,9 @@ class load_file():
         else:
             data = self._regrid_data(nbprocs, regriddir)
         self.data_dict = process_data.create_amrvac_dict(data, self.header)
+        if self.header['physics_type'] == 'hd' or self.header['physics_type'] == 'mhd':
+            self.data_dict.add_primitives()
         return self.data_dict.data
-
-    def _regrid_data(self, nbprocs, regriddir):
-        """
-        Regrids non-uniform data, which is saved as a Numpy file in the folder 'regridded_files'
-        (created if not present). The regrid directory is searched first if the data is already present.
-        If so it is loaded, if not regridding is started.
-        :param nbprocs: Number of processors to do the regridding. Defaults to max number - 2
-        :param regriddir: The directory to which the regridded file is saved. This directory is searched in order to
-                          try and load the file if already present.
-        """
-        self._check_regrid_directory(regriddir)
-        try:
-            data = self._load_regridded_data()
-        except FileNotFoundError:
-            data = regridding.regrid_amr_data(self.file, self.header, nbprocs)
-            self._save_regridded_data(data)
-        return data
-
-    def add_primitives(self):
-        """
-        Adds the primitives to the list of available variables. Everything must be loaded into RAM in order to do this.
-        """
-        self._check_datadict_exists()
-
-        if not(self.header["physics_type"] == 'hd' or self.header["physics_type"] == 'mhd'):
-            print("switching variable types is only possible in hd or mhd")
-            return
-        self.data_dict.add_primitives()
-        self.fields += self.data_dict.primitive_vars
 
     def get_time(self):
         """
@@ -157,23 +130,47 @@ class load_file():
         return self.header["time"]
 
     def get_extrema(self, var):
-        if var not in self.header["w_names"]:
-            raise KeyError("variable not currently known")
+        """
+        Returns the maximum and minimum value of the requested variable
+        :param var: variable, see ds.known_fields which are available
+        :return: min, max of the given variable
+        """
+        if var not in self.known_fields:
+            raise KeyError("variable not known: {}".format(var))
         varmax = -1e99
         varmin = 1e99
-        varidx = self.header["w_names"].index(var)
         for offset in self.block_offsets:
             block = datfile_utilities.get_single_block_data(self.file, offset, self.block_shape)
-            if self.header["ndim"] == 1:
-                varmax = np.maximum(varmax, np.max(block[:, varidx]))
-                varmin = np.minimum(varmin, np.min(block[:, varidx]))
-            elif self.header["ndim"] == 2:
-                varmax = np.maximum(varmax, np.max(block[:, :, varidx]))
-                varmin = np.minimum(varmin, np.min(block[:, :, varidx]))
-            else:
-                varmax = np.maximum(varmax, np.max(block[:, :, :, varidx]))
-                varmin = np.minimum(varmin, np.min(block[:, :, :, varidx]))
+            block, block_fields = process_data.add_primitives_to_single_block(block, self, add_velocities=True)
+            varidx = block_fields.index(var)
+            varmax = np.maximum(varmax, np.max(block[..., varidx]))
+            varmin = np.minimum(varmin, np.min(block[..., varidx]))
+            # if self.header["ndim"] == 1:
+            #     varmax = np.maximum(varmax, np.max(block[:, varidx]))
+            #     varmin = np.minimum(varmin, np.min(block[:, varidx]))
+            # elif self.header["ndim"] == 2:
+            #     varmax = np.maximum(varmax, np.max(block[:, :, varidx]))
+            #     varmin = np.minimum(varmin, np.min(block[:, :, varidx]))
+            # else:
+            #     varmax = np.maximum(varmax, np.max(block[:, :, :, varidx]))
+            #     varmin = np.minimum(varmin, np.min(block[:, :, :, varidx]))
+        print(">> minimum {}: {:2.3e}   |   maximum {}: {:2.3e}".format(var, varmin, var, varmax))
         return varmin, varmax
+
+
+
+
+    # 'protected' methods
+    def _data_is_uniform(self):
+        """
+        Checks if the data is uniformely refined.
+        :return: True if grid is uniform, False otherwise.
+        """
+        refined_nx = 2 ** (self.header['levmax'] - 1) * self.header['domain_nx']
+        nleafs_uniform = np.prod(refined_nx / self.header['block_nx'])
+        if not self.header["nleafs"] == nleafs_uniform:
+            return False
+        return True
 
     def _check_regrid_directory(self, regriddir):
         """
@@ -191,6 +188,23 @@ class load_file():
             if not os.path.isdir(regriddir):
                 sys.exit("Specified directory does not exist: {}".format(regriddir))
             self._regriddir = regriddir
+
+    def _regrid_data(self, nbprocs, regriddir):
+        """
+        Regrids non-uniform data, which is saved as a Numpy file in the folder 'regridded_files'
+        (created if not present). The regrid directory is searched first if the data is already present.
+        If so it is loaded, if not regridding is started.
+        :param nbprocs: Number of processors to do the regridding. Defaults to max number - 2
+        :param regriddir: The directory to which the regridded file is saved. This directory is searched in order to
+                          try and load the file if already present.
+        """
+        self._check_regrid_directory(regriddir)
+        try:
+            data = self._load_regridded_data()
+        except FileNotFoundError:
+            data = regridding.regrid_amr_data(self.file, self.header, nbprocs)
+            self._save_regridded_data(data)
+        return data
 
     def _save_regridded_data(self, data):
         """
@@ -225,12 +239,13 @@ class load_file():
             print("[INFO] Dataset must be loaded to do this, call load_all_data() first.")
             raise AttributeError
 
-    # Following methods provide easy access to functionalities in other scripts
-    def amrplot(self, var, **kwargs):
-        return amrvac_plotter.amrplot(self, var, **kwargs)
-    def rgplot(self, data, **kwargs):
-        return amrvac_plotter.rgplot(self, data, **kwargs)
-    def halpha(self, **kwargs):
-        return synthetic.h_alpha(self, **kwargs)
-    def faraday(self, **kwargs):
-        return synthetic.faraday(self, **kwargs)
+    def _get_known_fields(self):
+        fields = copy.deepcopy(self.header['w_names'])
+        if self.header['physics_type'] == 'hd' or self.header['physics_type'] == 'mhd':
+            if self.header['ndim'] == 1:
+                fields += ['v1', 'p', 'T']
+            elif self.header['ndim'] == 2:
+                fields += ['v1', 'v2', 'p', 'T']
+            else:
+                fields += ['v1', 'v2', 'v3', 'p', 'T']
+        return fields

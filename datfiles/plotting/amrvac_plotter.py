@@ -45,19 +45,12 @@ class amrplot(_plotsetup):
             raise NotImplementedError("Plotting in 3D is not supported")
 
     def plot_1d(self):
-        try:
-            var_idx = self.dataset.header['w_names'].index(self.var)
-        except ValueError:
-            raise NotImplementedError("Implement plotting of other variables than the ones in the datfiles file!")
-
         for ileaf, offset in enumerate(self.dataset.block_offsets):
             l_edge, r_edge = process_data.get_block_edges(ileaf, self.dataset)
-            # retrieve block offset in datfiles file
-            offset = self.dataset.block_offsets[ileaf]
-            # read in block data (contains all variables)
             block = datfile_utilities.get_single_block_data(self.dataset.file, offset, self.dataset.block_shape)
-            # cut block data to contain only the desired variable
-            block_data = block[:, var_idx]
+            block, block_fields = process_data.add_primitives_to_single_block(block, self.dataset, add_velocities=True)
+            varidx = block_fields.index(self.var)
+            block_data = block[:, varidx]
             x = np.linspace(l_edge, r_edge, self.dataset.header['block_nx'])
             self.ax.plot(x, block_data, '-k')
 
@@ -66,14 +59,22 @@ class amrplot(_plotsetup):
         norm = None
         if self.logscale:
             norm = matplotlib.colors.LogNorm()
+        # iterate over blocks in dataset
         for ileaf, offset in enumerate(self.dataset.block_offsets):
+            # retrieve x and y coordinates for each block
             l_edge, r_edge = process_data.get_block_edges(ileaf, self.dataset)
+            # read in block data (contains all variables)
             block = datfile_utilities.get_single_block_data(self.dataset.file, offset, self.dataset.block_shape)
-            block_data = block[:, :, self.dataset.header['w_names'].index(self.var)]
+            # add primitive variables to this block
+            block, block_fields = process_data.add_primitives_to_single_block(block, self.dataset, add_velocities=True)
+            # get index of variable to plot
+            varidx = block_fields.index(self.var)
+            block_data = block[:, :, varidx]
             x = np.linspace(l_edge[0], r_edge[0], self.dataset.header['block_nx'][0])
             y = np.linspace(l_edge[1], r_edge[1], self.dataset.header['block_nx'][1])
             im = self.ax.pcolormesh(x, y, block_data.T, cmap=self.cmap, vmin=varmin, vmax=varmax, norm=norm)
 
+            # logic to draw the mesh
             if self.draw_mesh:
                 if not r_edge[0] == self.dataset.header["xmax"][0]:
                     self.ax.vlines(x=r_edge[0], ymin=l_edge[1], ymax=r_edge[1], color=self.mesh_color,
