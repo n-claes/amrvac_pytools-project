@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from dat_files.reading import datfile_utilities
 from dat_files.processing import process_data
@@ -10,6 +12,7 @@ class _plotsetup():
         self.dataset = dataset
 
         self.cmap = kwargs.get("cmap", "jet")
+        self.logscale = kwargs.get("logscale", False)
 
         # initialise figure and axis
         fig = kwargs.get("fig", None)
@@ -60,13 +63,16 @@ class amrplot(_plotsetup):
 
     def plot_2d(self):
         varmin, varmax = self.dataset.get_extrema(self.var)
+        norm = None
+        if self.logscale:
+            norm = matplotlib.colors.LogNorm()
         for ileaf, offset in enumerate(self.dataset.block_offsets):
             l_edge, r_edge = process_data.get_block_edges(ileaf, self.dataset)
             block = datfile_utilities.get_single_block_data(self.dataset.file, offset, self.dataset.block_shape)
             block_data = block[:, :, self.dataset.header['w_names'].index(self.var)]
-            x = np.linspace(l_edge[0], r_edge[0], self.dataset.header['block_nx'][1])
-            y = np.linspace(l_edge[1], r_edge[1], self.dataset.header['block_nx'][0])
-            im = self.ax.pcolormesh(x, y, block_data.T, cmap=self.cmap, vmin=varmin, vmax=varmax)
+            x = np.linspace(l_edge[0], r_edge[0], self.dataset.header['block_nx'][0])
+            y = np.linspace(l_edge[1], r_edge[1], self.dataset.header['block_nx'][1])
+            im = self.ax.pcolormesh(x, y, block_data.T, cmap=self.cmap, vmin=varmin, vmax=varmax, norm=norm)
 
             if self.draw_mesh:
                 if not r_edge[0] == self.dataset.header["xmax"][0]:
@@ -75,7 +81,11 @@ class amrplot(_plotsetup):
                 if not r_edge[1] == self.dataset.header["xmax"][1]:
                     self.ax.hlines(y=r_edge[1], xmin=l_edge[0], xmax=r_edge[0], color=self.mesh_color,
                                    lw=self.mesh_linewidth, linestyle=self.mesh_linestyle, alpha=self.mesh_opacity)
-        self.fig.colorbar(im)
+        self.ax.set_aspect('equal')
+        divider = make_axes_locatable(self.ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        self.fig.colorbar(im, cax=cax)
+        self.fig.tight_layout()
 
 
 class rgplot(_plotsetup):
@@ -102,7 +112,14 @@ class rgplot(_plotsetup):
 
     def plot_2d(self):
         bounds_x, bounds_y = self.dataset.get_bounds()
-        im = self.ax.imshow(np.rot90(self.data), extent=[*bounds_x, *bounds_y], cmap=self.cmap)
-        self.fig.colorbar(im)
+        norm = None
+        if self.logscale:
+            norm = matplotlib.colors.LogNorm()
+        im = self.ax.imshow(np.rot90(self.data), extent=[*bounds_x, *bounds_y], cmap=self.cmap, norm=norm)
+        self.ax.set_aspect('equal')
+        divider = make_axes_locatable(self.ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        self.fig.colorbar(im, cax=cax)
+        self.fig.tight_layout()
 
 
