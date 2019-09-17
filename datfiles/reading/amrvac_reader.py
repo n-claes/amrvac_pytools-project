@@ -1,5 +1,5 @@
 """
-Class to load in MPI-AMRVAC .dat files.
+Class to load in MPI-AMRVAC .datfiles files.
 
 @author: Niels Claes
          Last edit: 14 August 2019
@@ -7,11 +7,11 @@ Class to load in MPI-AMRVAC .dat files.
 import sys, os
 import numpy as np
 import copy
-from dat_files.reading import datfile_utilities
-from dat_files.processing import regridding, process_data
-from dat_files.physics import physical_constants
-from dat_files.plotting import amrvac_plotter
-from dat_files.views import synthetic
+from datfiles.reading import datfile_utilities
+from datfiles.processing import regridding, process_data
+from datfiles.physics import physical_constants
+from datfiles.plotting import amrvac_plotter
+from datfiles.views import synthetic
 
 
 class load_file():
@@ -20,11 +20,11 @@ class load_file():
             file = open(filename, "rb")
         except IOError:
             print("Unable to open {}".format(filename))
-            print("Is this an MPI-AMRVAC .dat file?")
+            print("Is this an MPI-AMRVAC .datfiles file?")
             sys.exit(1)
 
         self._filename = filename
-        # Trim filename, assumes format .../.../filenameXXXX.dat
+        # Trim filename, assumes format .../.../filenameXXXX.datfiles
         for c in range(len(filename) - 1, -1, -1):
             if filename[c] == '/' or filename[c] == '\\':
                 self._filename = filename[c+1:]

@@ -3,14 +3,14 @@ import multiprocessing
 import scipy.interpolate as interp
 import numpy as np
 
-from dat_files.reading import datfile_utilities
+from datfiles.reading import datfile_utilities
 
 
 def regrid_amr_data(istream, hdr, nbprocs):
     """
     Retrieves the data for a non-uniform data set by performing regridding.
     :param istream   open datfile buffer in 'rb' mode
-    :param hdr       the .dat file header.
+    :param hdr       the .datfiles file header.
     :param nbprocs   the number of processors to use when regridding.
     :return: The raw data as a NumPy array.
     """
@@ -121,7 +121,7 @@ def interpolate_block(b, hdr):
     """
     Interpolates a given block to the maximum refinement level using flat interpolation.
     :param b: The block to refine.
-    :param hdr: The .dat file header.
+    :param hdr: The .datfiles file header.
     :return: NumPy array containing the refined block data.
     """
     block_lvl = b['lvl']

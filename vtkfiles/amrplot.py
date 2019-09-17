@@ -5,8 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from scipy.interpolate import griddata
 import sys, time
-from amrvac_tools.vtk_files import streamplot
-from amrvac_tools.vtk_files import read
+from amrvac_tools.vtkfiles import streamplot, read
 from matplotlib.ticker import MaxNLocator
 from scipy import ndimage
 import copy

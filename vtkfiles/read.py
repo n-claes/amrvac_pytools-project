@@ -3,7 +3,7 @@
 import numpy as np
 import vtk as v
 from numpy import loadtxt as pylabload
-from vtk_files import numpy_support as ah
+from vtkfiles import numpy_support as ah
 import sys, time
 import struct
 
@@ -18,7 +18,7 @@ else:
 
 #=============================================================================
 def extract(data,varname,attribute_mode='cell'):
-    """Extracts variable "varname" from vtk datastructure 'data'"""
+    """Extracts variable "varname" from vtkfiles datastructure 'data'"""
     if attribute_mode == 'cell':
         vtk_values = data.GetCellData().GetArray(varname)
     elif attribute_mode == 'point':
@@ -313,7 +313,7 @@ class load:
     def mirror(self):
         """
         Called when mirrorPlane != None
-        The reflection plane is labeled as follows: From the vtk documentation: 
+        The reflection plane is labeled as follows: From the vtkfiles documentation:
         ReflectionPlane {
         USE_X_MIN = 0, USE_Y_MIN = 1, USE_Z_MIN = 2, USE_X_MAX = 3,
         USE_Y_MAX = 4, USE_Z_MAX = 5, USE_X = 6, USE_Y = 7,
@@ -537,7 +537,7 @@ class particles():
 
 
     def makefilename(self):
-        self.filename = self.filenameout+'_particles'+str(self.offset).zfill(4)+'.dat'
+        self.filename = self.filenameout+'_particles'+str(self.offset).zfill(4)+'.datfiles'
 
 
     def openfile(self):

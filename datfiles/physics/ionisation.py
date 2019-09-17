@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
 
-from dat_files.physics import ionisation_tables
+from datfiles.physics import ionisation_tables
 
 # Create bivariate spline approximation over rectangular mesh
 # Do this outside of methods, it only has to be done once when importing the module.

@@ -90,7 +90,7 @@ VTK_GRAPH                         = 20
 VTK_TREE                          = 21
 VTK_SELECTION                     = 22
 
-# These types define error codes for vtk functions
+# These types define error codes for vtkfiles functions
 VTK_OK                 = 1
 VTK_ERROR              = 2
 

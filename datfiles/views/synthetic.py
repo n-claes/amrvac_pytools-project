@@ -3,9 +3,9 @@ import numpy as np
 import matplotlib.colors
 import matplotlib.pyplot as plt
 
-from dat_files.reading import datfile_utilities
-from dat_files.processing import regridding, process_data
-from dat_files.physics import ionisation
+from datfiles.reading import datfile_utilities
+from datfiles.processing import regridding, process_data
+from datfiles.physics import ionisation
 
 
 class _syntheticmain():

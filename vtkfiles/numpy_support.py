@@ -27,7 +27,7 @@ Created by Prabhu Ramachandran in Feb. 2008.
 """
 
 import vtk
-from amrvac_tools.vtk_files import vtkConstants
+from amrvac_tools.vtkfiles import vtkConstants
 import numpy
 
 # Useful constants for VTK arrays.
@@ -95,7 +95,7 @@ def create_vtk_array(vtk_arr_type):
     """Internal function used to create a VTK data array from another
     VTK array given the VTK array type.
     """
-    tmp = vtk.vtkDataArray.CreateDataArray(vtk_arr_type)
+    tmp = vtk.vtkDataArray.CreateDataArray(vtk_arr_type, 0)
     # We need to manually dereference objects created with anything
     # but the constructor.
     tmp.UnRegister(None)
@@ -134,9 +134,9 @@ def numpy_to_vtk(num_array, deep=0):
     assert len(shape) < 3, \
            "Only arrays of dimensionality 2 or lower are allowed!"
     assert not numpy.issubdtype(z.dtype, complex), \
-           "Complex numpy arrays cannot be converted to vtk arrays."\
+           "Complex numpy arrays cannot be converted to vtkfiles arrays."\
            "Use real() or imag() to get a component of the array before"\
-           " passing it to vtk."
+           " passing it to vtkfiles."
 
     # First create an array of the right type by using the typecode.
     vtk_typecode = get_vtk_array_type(z.dtype)

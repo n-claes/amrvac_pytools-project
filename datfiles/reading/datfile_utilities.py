@@ -1,5 +1,5 @@
 """
-Module containing reading and processing methods for an MPI-AMRVAC .dat file.
+Module containing reading and processing methods for an MPI-AMRVAC .datfiles file.
 
 @author: Jannis Theunissen (original)
          Niels Claes (extensions)
@@ -29,7 +29,7 @@ def get_header(istream):
     [h['datfile_version']] = struct.unpack(fmt, istream.read(struct.calcsize(fmt)))
 
     if h['datfile_version'] < 3:
-        raise IOError("Unsupported AMRVAC .dat file version: %d", h['datfile_version'])
+        raise IOError("Unsupported AMRVAC .datfiles file version: %d", h['datfile_version'])
 
     # Read scalar data at beginning of file
     fmt = ALIGN + 9 * 'i' + 'd'
@@ -208,8 +208,8 @@ def get_blocks(istream):
 def get_uniform_data(istream, hdr):
     """
     Retrieves the data for a uniform data set.
-    :param istream: .dat file, opened in binary mode.
-    :param hdr: The .dat file header.
+    :param istream: .datfiles file, opened in binary mode.
+    :param hdr: The .datfiles file header.
     :return The raw data as a NumPy array.
     """
     blocks = get_blocks(istream)

@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import matplotlib.colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from dat_files.reading import datfile_utilities
-from dat_files.processing import process_data
+from datfiles.reading import datfile_utilities
+from datfiles.processing import process_data
 
 
 class _plotsetup():
@@ -48,11 +48,11 @@ class amrplot(_plotsetup):
         try:
             var_idx = self.dataset.header['w_names'].index(self.var)
         except ValueError:
-            raise NotImplementedError("Implement plotting of other variables than the ones in the dat file!")
+            raise NotImplementedError("Implement plotting of other variables than the ones in the datfiles file!")
 
         for ileaf, offset in enumerate(self.dataset.block_offsets):
             l_edge, r_edge = process_data.get_block_edges(ileaf, self.dataset)
-            # retrieve block offset in dat file
+            # retrieve block offset in datfiles file
             offset = self.dataset.block_offsets[ileaf]
             # read in block data (contains all variables)
             block = datfile_utilities.get_single_block_data(self.dataset.file, offset, self.dataset.block_shape)
