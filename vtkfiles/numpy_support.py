@@ -27,8 +27,9 @@ Created by Prabhu Ramachandran in Feb. 2008.
 """
 
 import vtk
-from amrvac_tools.vtkfiles import vtkConstants
 import numpy
+
+from amrvac_tools.vtkfiles import vtkConstants
 
 # Useful constants for VTK arrays.
 VTK_ID_TYPE_SIZE = vtk.vtkIdTypeArray().GetDataTypeSize()

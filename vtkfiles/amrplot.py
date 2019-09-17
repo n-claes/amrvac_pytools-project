@@ -5,13 +5,14 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from scipy.interpolate import griddata
 import sys, time
-from amrvac_tools.vtkfiles import streamplot, read
 from matplotlib.ticker import MaxNLocator
 from scipy import ndimage
 import copy
 from scipy import interpolate
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from copy import deepcopy
+
+from amrvac_tools.vtkfiles import streamplot, read
 
 if sys.platform == "win32":
 # On Windows, the best timer is time.clock()

@@ -7,11 +7,11 @@ Class to load in MPI-AMRVAC .datfiles files.
 import sys, os
 import numpy as np
 import copy
-from datfiles.reading import datfile_utilities
-from datfiles.processing import regridding, process_data
-from datfiles.physics import physical_constants
-from datfiles.plotting import amrvac_plotter
-from datfiles.views import synthetic
+from amrvac_tools.datfiles.reading import datfile_utilities
+from amrvac_tools.datfiles.processing import regridding, process_data
+from amrvac_tools.datfiles.physics import physical_constants
+from amrvac_tools.datfiles.plotting import amrvac_plotter
+from amrvac_tools.datfiles.views import synthetic
 
 
 class load_file():
@@ -145,15 +145,6 @@ class load_file():
             varidx = block_fields.index(var)
             varmax = np.maximum(varmax, np.max(block[..., varidx]))
             varmin = np.minimum(varmin, np.min(block[..., varidx]))
-            # if self.header["ndim"] == 1:
-            #     varmax = np.maximum(varmax, np.max(block[:, varidx]))
-            #     varmin = np.minimum(varmin, np.min(block[:, varidx]))
-            # elif self.header["ndim"] == 2:
-            #     varmax = np.maximum(varmax, np.max(block[:, :, varidx]))
-            #     varmin = np.minimum(varmin, np.min(block[:, :, varidx]))
-            # else:
-            #     varmax = np.maximum(varmax, np.max(block[:, :, :, varidx]))
-            #     varmin = np.minimum(varmin, np.min(block[:, :, :, varidx]))
         print(">> minimum {}: {:2.3e}   |   maximum {}: {:2.3e}".format(var, varmin, var, varmax))
         return varmin, varmax
 

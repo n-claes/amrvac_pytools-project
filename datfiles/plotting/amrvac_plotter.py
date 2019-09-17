@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import matplotlib.colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from datfiles.reading import datfile_utilities
-from datfiles.processing import process_data
+from amrvac_tools.datfiles.reading import datfile_utilities
+from amrvac_tools.datfiles.processing import process_data
 
 
 class _plotsetup():

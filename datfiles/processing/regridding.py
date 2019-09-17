@@ -3,7 +3,7 @@ import multiprocessing
 import scipy.interpolate as interp
 import numpy as np
 
-from datfiles.reading import datfile_utilities
+from amrvac_tools.datfiles.reading import datfile_utilities
 
 
 def regrid_amr_data(istream, hdr, nbprocs):

@@ -3,9 +3,10 @@
 import numpy as np
 import vtk as v
 from numpy import loadtxt as pylabload
-from vtkfiles import numpy_support as ah
 import sys, time
 import struct
+
+from amrvac_tools.vtkfiles import numpy_support as ah
 
 
 if sys.platform == "win32":
