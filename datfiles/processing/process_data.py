@@ -34,7 +34,6 @@ def add_primitives_to_single_block(block, dataset, add_velocities=False):
             v1, v2, p = convert.hd_to_primitive_2d(*(block[:, :, idx] for idx in range(0, len(block_fields))), gamma)
         else:
             v1, v2, p = convert.mhd_to_conserved_2d(*(block[:, :, idx] for idx in range(0, len(block_fields))), gamma)
-        temp = p / block[:, :, rho_idx]
     else:
         if phys_type == 'hd':
             v1, v2, v3, p = convert.hd_to_primitive_3d(*(block[:, :, :, idx] for idx in range(0, len(block_fields))), gamma)
