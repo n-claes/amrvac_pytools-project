@@ -1,8 +1,8 @@
 """
-Class to load in MPI-AMRVAC .datfiles files.
+Main class to load in MPI-AMRVAC native .dat files.
 
 @author: Niels Claes
-         Last edit: 14 August 2019
+         Last edit: 03 October 2019
 """
 import sys, os
 import numpy as np
