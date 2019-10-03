@@ -22,6 +22,7 @@ class _plotsetup():
         else:
             self.fig = fig
             self.ax = ax
+        self.colorbar = None
 
 class amrplot(_plotsetup):
     def __init__(self, dataset, var, **kwargs):
@@ -85,7 +86,7 @@ class amrplot(_plotsetup):
         self.ax.set_aspect('equal')
         divider = make_axes_locatable(self.ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
-        self.fig.colorbar(im, cax=cax)
+        self.colorbar = self.fig.colorbar(im, cax=cax)
         self.fig.tight_layout()
 
 
@@ -120,7 +121,7 @@ class rgplot(_plotsetup):
         self.ax.set_aspect('equal')
         divider = make_axes_locatable(self.ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
-        self.fig.colorbar(im, cax=cax)
+        self.colorbar = self.fig.colorbar(im, cax=cax)
         self.fig.tight_layout()
 
 
