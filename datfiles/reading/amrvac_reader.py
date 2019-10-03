@@ -134,10 +134,11 @@ class load_file():
         """
         return self.header["time"]
 
-    def get_extrema(self, var):
+    def get_extrema(self, var, print_result=False):
         """
         Returns the maximum and minimum value of the requested variable
         :param var: variable, see ds.known_fields which are available
+        :param print_result: if True, prints the extrema to the console
         :return: min, max of the given variable
         """
         if var not in self.known_fields:
@@ -150,7 +151,8 @@ class load_file():
             varidx = block_fields.index(var)
             varmax = np.maximum(varmax, np.max(block[..., varidx]))
             varmin = np.minimum(varmin, np.min(block[..., varidx]))
-        print(">> minimum {}: {:2.3e}   |   maximum {}: {:2.3e}".format(var, varmin, var, varmax))
+        if print_result:
+            print(">> minimum {}: {:2.3e}   |   maximum {}: {:2.3e}".format(var, varmin, var, varmax))
         return varmin, varmax
 
 
