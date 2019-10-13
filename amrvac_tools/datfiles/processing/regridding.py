@@ -8,7 +8,7 @@ from amrvac_tools.datfiles.reading import datfile_utilities
 def regrid_amr_data(dataset, nbprocs):
     """
     Retrieves the data for a non-uniform data set by performing regridding.
-    :param dataset   instance of 'amrvac_reader.load_file' class.
+    :param dataset   instance of 'amrvac_reader.load_datfile' class.
     :param nbprocs   the number of processors to use when regridding.
     :return: The raw data as a NumPy array.
     """
@@ -166,6 +166,12 @@ def _interpolate_block(b, hdr):
     return b_interpolated
 
 def regrid_2dmatrix(matrix, new_shape):
+    """
+    Regrids a 2D matrix to a new shape
+    :param matrix: original matrix to regrid
+    :param new_shape: new shape, in the same form as np.shape
+    :return: Numpy array containing the original matrix regridded to new_shape
+    """
     if matrix.shape == tuple(new_shape):
         return matrix
     nb_elements = np.prod(matrix.shape)

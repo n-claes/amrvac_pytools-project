@@ -1,8 +1,10 @@
 """
 Main class to load in MPI-AMRVAC native .dat files.
 
-@author: Niels Claes
-         Last edit: 03 October 2019
+@author: Niels Claes    (niels.claes@kuleuven.be)
+@author: Clément Robert (clement.robert@oca.eu)
+
+         Last edit: 13 October 2019
 """
 import sys, os
 import numpy as np
@@ -254,11 +256,19 @@ class load_datfile():
             raise FileNotFoundError
 
     def _check_datadict_exists(self):
+        """
+        Checks if the data dictionary is loaded.
+        :raises AttributeError  if self.data_dict is None
+        """
         if self.data_dict is None:
             print("[INFO] Dataset must be loaded to do this, call load_all_data() first.")
             raise AttributeError
 
     def _get_known_fields(self):
+        """
+        Retrieves the known fields for a given dataset.
+        :return: Regular list with the known fields as strings
+        """
         fields = copy.deepcopy(self.header['w_names'])
         if self.header['physics_type'] == 'hd' or self.header['physics_type'] == 'mhd':
             if self.header['ndim'] == 1:
