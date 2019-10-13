@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import os
 
-project_name = "amrvac_tools"
+project_name = "amrvac_pytools"
 required = ['numpy', 'scipy', 'matplotlib', 'vtk']
 version = '1.0.0'
 
