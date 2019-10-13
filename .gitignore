@@ -1,9 +1,8 @@
+*__pycache__/
+regridded_files/
 *.dat
 *.vtu
-*__pycache__/
 *.pyc
 *.npy
-regridded_files/
 *test.py
-deprecated/
-old/
+*tests.py
