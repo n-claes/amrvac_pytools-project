@@ -16,7 +16,7 @@ from amrvac_tools.datfiles.plotting import amrvac_plotter
 from amrvac_tools.datfiles.views import synthetic
 
 
-class load_file():
+class load_datfile():
     # Following methods provide easy access to functionalities in other scripts
     def amrplot(self, var, **kwargs):
         return amrvac_plotter.amrplot(self, var, **kwargs)
@@ -33,10 +33,8 @@ class load_file():
     def __init__(self, filename):
         try:
             file = open(filename, "rb")
-        except IOError:
-            print("Unable to open {}".format(filename))
-            print("Is this an MPI-AMRVAC .datfiles file?")
-            sys.exit(1)
+        except:
+            raise FileNotFoundError("Unable to open '{}', is this an MPI-AMRVAC .dat file?".format(filename))
 
         self._filename = filename
         # Trim filename, assumes format .../.../filenameXXXX.datfiles
