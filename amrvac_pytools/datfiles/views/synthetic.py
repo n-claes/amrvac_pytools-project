@@ -34,6 +34,8 @@ class _syntheticmain():
         self.cmap = None
         self.logscale = None
         self.colorbar = None
+        # This makes it possible to retrieve the synthetic data later on
+        self.imagedata = None
 
         # initialise variables
         self.line_of_sight = kwargs.get("line_of_sight", "x")
@@ -154,6 +156,7 @@ class _syntheticmain():
         im = self.ax.imshow(np.rot90(view), extent=[*bounds_x, *bounds_y], cmap=self.cmap, norm=norm)
         self.colorbar = self.fig.colorbar(im)
         self.ax.set_title("integrated over {}".format(self.line_of_sight))
+        self.imagedata = view
 
 
 class h_alpha(_syntheticmain):

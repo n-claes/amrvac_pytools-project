@@ -3,7 +3,7 @@ import os
 
 project_name = "amrvac_pytools"
 required = ['numpy', 'scipy', 'matplotlib', 'vtk']
-version = '1.0.0'
+version = '1.0.1'
 
 setup(
     name = project_name,
